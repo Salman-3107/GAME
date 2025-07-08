@@ -22,11 +22,13 @@ typedef enum
 
 GameState currentState = STATE_MAIN_MENU;
 bool bgmplaying = false;
-
+//co-ordinate
+int x,y;
 // Ball
 float ballX = 200, ballY = 300;
 float ballRadius = 20;
 float ballDY = 0;  
+float ballDx = 0;
 float gravity = -0.6;  
 bool onGround = false;  
 
@@ -87,8 +89,8 @@ int btnX = 100, btnY = 100, btnW = 200, btnH = 50, gap = 20;
 
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
-    for (int y = 0; y < MAX_MAP_HEIGHT; y++) {
-        for (int x = 0; x < MAX_MAP_WIDTH; x++) {
+    for (y = 0; y < MAX_MAP_HEIGHT; y++) {
+        for (x = 0; x < MAX_MAP_WIDTH; x++) {
             char currentChar = map[y][x];
             int posX = (x * blockSize) - cameraX;  // Apply cameraX for horizontal camera movement
             int posY = ((MAX_MAP_HEIGHT - y - 1) * blockSize) - cameraY;  // Apply cameraY for vertical camera movement
@@ -199,7 +201,7 @@ void collision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]){
             if (map[tileYBelow][tileX] == '#')
             {
                 ballY = (MAX_MAP_HEIGHT - tileYBelow) * blockSize + ballRadius;
-                ballDY = -ballDY * 0.7f; 
+                ballDY = -ballDY * 0.2f; 
                 onGround = true;
             }
             else
@@ -284,9 +286,9 @@ void displayHighScore() {
         iText(20, 520, highScoreText, GLUT_BITMAP_HELVETICA_18);
     }
 }
-void iKeyboard(unsigned char key)
+void iKeyboard(unsigned char key,int state)
 {
-    if (key == 'b') 
+    if (key == 'b' && currentState == STATE_PAUSE) 
     {
         currentState = STATE_MAIN_MENU;
         ballX = 200;
@@ -309,7 +311,7 @@ void iKeyboard(unsigned char key)
         ballDY = 0;  
         vx = 0;
     }
-    if (key == 'p') 
+    if (key == 'p' && currentState == STATE_GAME) 
     {
         currentState = STATE_PAUSE;
     }
@@ -324,7 +326,7 @@ void iKeyboard(unsigned char key)
         {
             currentState = STATE_GAME;
         }
-        else if (key == 'b')  
+        else if (key == 'b' && currentState == STATE_PAUSE)  
         {
             currentState = STATE_MAIN_MENU;
         }
@@ -352,6 +354,8 @@ void iKeyboard(unsigned char key)
     {
         if (currentLevel < 3) {
             currentLevel++;
+            x=0;
+            y=0;
             currentState = STATE_GAME;
         } else {
             currentState = STATE_MAIN_MENU;
@@ -371,7 +375,7 @@ void iKeyboard(unsigned char key)
         }
     }
 
-    if (key == 13) {  // Enter key
+    if (key == 13 && currentState!=STATE_GAME) {  // Enter key
         if (strlen(playerName) > 0) {  
             currentState = STATE_LEVEL_SELECT; 
         }
@@ -457,7 +461,7 @@ void iDraw()
 
         ballDY += gravity;
         ballY += ballDY;
-        ballX += vx;
+        ballX += ballDx;
 
         
 
@@ -572,30 +576,65 @@ void iMouse(int button, int state, int mx, int my)
     }
 }
 
-void iSpecialKeyboard(unsigned char key)
+void iMovement(int value)
 {
-    int moveSpeed = 10;
-
-
-    if (key==GLUT_KEY_LEFT)
+    if(isSpecialKeyPressed(GLUT_KEY_LEFT))
     {
-        vx=-moveSpeed;
+        ballDx = -moveSpeed;
     }
-    if (key==GLUT_KEY_RIGHT)
+    else if(isSpecialKeyPressed(GLUT_KEY_RIGHT))
     {
-        vx=moveSpeed; 
+        ballDx = moveSpeed;
     }
+    else
+    {
+        ballDx = 0;  // Stop horizontal movement if no key is pressed
+    }
+     if(isSpecialKeyPressed(GLUT_KEY_UP))
+    {
+        if (onGround)  
+        {
+            ballDY = jumpSpeed;  
+            onGround = false;  
+        }
+    }
+    glutTimerFunc(10, iMovement, 0); // Call this function again after 15 milliseconds
+   
 }
-void iSpecialKeyboardUp(unsigned char key)
+void iSpecialKeyboard(unsigned char key, int state){}
+
+// void iSpecialKeyboard(unsigned char key, int state)
+// {
+//     int moveSpeed = 10;
+
+
+//     if (key==GLUT_KEY_LEFT && state == GLUT_DOWN)
+//     {
+//         ballDx=-moveSpeed;
+//     }
+//     else if(key==GLUT_KEY_LEFT && state == GLUT_UP)
+//     {
+//         ballDx = 0;
+//     }
+//     if (key==GLUT_KEY_RIGHT && state == GLUT_DOWN)
+//     {
+//         ballDx=+moveSpeed;
+//     }
+//     else if(key==GLUT_KEY_RIGHT && state == GLUT_UP)
+//     {
+//         ballDx = 0;
+//     }
+// }
+void iSpecialKeyboardUp(unsigned char key,int state)
 {
     if (key == GLUT_KEY_LEFT || key == GLUT_KEY_RIGHT)
     {
-        vx = 0;  
+        ballDx = 0;  
     }
 }
 
 
-int gameFPS = 60; 
+//int gameFPS = 60; 
 
 void timer(int value) {
    
@@ -604,7 +643,7 @@ void timer(int value) {
         iDraw();
     }
 
-    glutTimerFunc(1000 / gameFPS, timer, 0); 
+    glutTimerFunc(15, timer, 0); 
 
 }
 
@@ -614,11 +653,9 @@ int main(int argc, char *argv[])
 
     glutInit(&argc, argv);
     iInitializeSound();
-    iInitialize(1000, 600, "Bounce Classic");
-
-    
-    glutTimerFunc(1000 / gameFPS, timer, 0);  
-
-    glutMainLoop();
+    glutTimerFunc(10, iMovement, 0);
+    glutTimerFunc(15, timer, 0);  
+    iOpenWindow(1000, 600, "Bounce Classic");
+    // int t=iSetTimer(15,iMovement);
     return 0;
 }
