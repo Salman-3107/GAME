@@ -35,7 +35,7 @@ float gravity = -0.6;
 bool onGround = false;  
 
 float vx = 0, vy = 0;
-float moveSpeed = 5;
+float moveSpeed = 7;
 float jumpSpeed = 25; 
 
 int score = 0; 
@@ -385,11 +385,11 @@ void iKeyboard(unsigned char key,int state)
     }
     if(key=='b' && currentState== STATE_INSTRUCTIONS){
         currentState = STATE_MAIN_MENU;
-        //initializeLevel();
+        initializeLevel();
     }
     if(key=='b' && currentState== STATE_SETTINGS){
         currentState = STATE_MAIN_MENU;
-        //initializeLevel();
+        initializeLevel();
     }
     if (key == ' ' && onGround && currentState == STATE_GAME)  
     {
@@ -400,7 +400,7 @@ void iKeyboard(unsigned char key,int state)
     if (currentState == STATE_GAME_OVER && key == 'b')  
     {
         currentState = STATE_MAIN_MENU;  
-        initializeLevel();
+        initializeLevel(); 
         score = 0;
     }
     
@@ -546,6 +546,7 @@ void iDraw()
         sprintf(scoreText, "Score: %d", score);
         iSetColor(255, 255, 255);
         iText(20, 560, scoreText, GLUT_BITMAP_HELVETICA_18);
+        iShowSpeed(20, 530);
     }
     else if (currentState == STATE_INSTRUCTIONS)
     {
