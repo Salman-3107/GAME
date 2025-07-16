@@ -2,7 +2,8 @@
 #include "iSound.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>   
+#include <math.h>
+#include <string.h>
 
 // Game states using enum
 typedef enum
@@ -18,6 +19,7 @@ typedef enum
     STATE_VICTORY,
     STATE_EXIT,
     STATE_GAME_OVER,
+    STATE_LEADERBOARD
 } GameState;
 
 GameState currentState = STATE_MAIN_MENU;
@@ -31,20 +33,33 @@ float ballX = 200, ballY = 300;
 float ballRadius = 20;
 float ballDY = 0;  
 float ballDx = 0;
-float gravity = -0.6;  
+float gravity = -0.7;  
 bool onGround = false;  
 
 float vx = 0, vy = 0;
 float moveSpeed = 7;
-float jumpSpeed = 25; 
+float jumpSpeed = 22; 
 
 int score = 0; 
 int currentLevel = 1;
-//name 
-char playerName[50]; 
-int namelength=0;
-int write_mode=1;
-int entered=0;
+//score
+typedef struct {
+    char name[50];
+    int score;
+    int level;
+} HighScore;
+
+//compare
+int compareScores(const void *a, const void *b) {
+    HighScore *scoreA = (HighScore *)a;
+    HighScore *scoreB = (HighScore *)b;
+    return scoreB->score - scoreA->score;  // Descending order
+}
+// Player name system
+char playerName[50] = ""; 
+int nameLength = 0;
+bool nameEntered = false;  // Flag to track if name has been entered this session
+bool isEnteringName = false;  // Flag for name input state
 
 // Map 
 #define MAX_MAP_WIDTH 120
@@ -66,7 +81,7 @@ char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "##.............#########..##..##.........#####....................##........c........##.....................#........#",
     "##.............##.....##..##..##.........#####....................##.......##........##.........c....##...###........#",
     "##.............##.............##.........#####............................####..................##...##.....#........#",
-    "##XXXX..o....|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx..G#",
+    "##xxxx..o....|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx..G#",
     "######################################################################################################################"
 };
 
@@ -88,7 +103,7 @@ int visibleWidth = 1000;
 int visibleHeight = 600;
 
 // Button variables for Main Menu
-int btnX = 100, btnY = 100, btnW = 200, btnH = 50, gap = 20;
+int btnX = 800, btnY = 100, btnW = 200, btnH = 50, gap = 20;
 
 // Initialize game for new level
 void initializeLevel() {
@@ -101,6 +116,86 @@ void initializeLevel() {
     onGround = false;
     cameraX = 0;
     cameraY = 0;
+}
+
+// Initialize player name for new game session
+void initializePlayerName() {
+    memset(playerName, 0, sizeof(playerName));
+    nameLength = 0;
+    nameEntered = false;
+    isEnteringName = false;
+}
+
+void displayLeaderboard() {
+    FILE *file = fopen("highscore.txt", "r");
+    if (file == NULL) {
+        iSetColor(255, 255, 255);
+        iText(400, 300, "No high scores yet!", GLUT_BITMAP_HELVETICA_18);
+        return;
+    }
+
+    HighScore scores[1000];  // Temporary array to store all scores
+    int count = 0;
+    char line[150];
+    
+    // Read all scores from file
+    while (fgets(line, sizeof(line), file) && count < 1000) {
+        char tempName[50];
+        int tempLevel, tempScore;
+        
+        // Parse the line format: "Name - Level X: Score"
+        if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3) {
+            strcpy(scores[count].name, tempName);
+            scores[count].level = tempLevel;
+            scores[count].score = tempScore;
+            count++;
+        }
+    }
+    fclose(file);
+
+    // Sort scores in descending order
+    qsort(scores, count, sizeof(HighScore), compareScores);
+
+    // Display header
+    iSetColor(255, 255, 0);
+    iText(400, 550, "TOP 10 HIGH SCORES", GLUT_BITMAP_TIMES_ROMAN_24);
+    iSetColor(255, 255, 255);
+    iText(200, 520, "Rank", GLUT_BITMAP_HELVETICA_18);
+    iText(300, 520, "Name", GLUT_BITMAP_HELVETICA_18);
+    iText(450, 520, "Level", GLUT_BITMAP_HELVETICA_18);
+    iText(550, 520, "Score", GLUT_BITMAP_HELVETICA_18);
+
+    // Draw a line under header
+    iSetColor(255, 255, 255);
+    iLine(180, 510, 620, 510);
+
+    // Display top 10 scores
+    int displayCount = (count < 10) ? count : 10;
+    for (int i = 0; i < displayCount; i++) {
+        char rankText[10];
+        char levelText[10];
+        char scoreText[20];
+        
+        sprintf(rankText, "%d", i + 1);
+        sprintf(levelText, "%d", scores[i].level);
+        sprintf(scoreText, "%d", scores[i].score);
+        
+        // Different colors for top 3
+        if (i == 0) iSetColor(255, 215, 0);      // Gold
+        else if (i == 1) iSetColor(192, 192, 192); // Silver
+        else if (i == 2) iSetColor(205, 127, 50);  // Bronze
+        else iSetColor(255, 255, 255);             // White
+        
+        int yPos = 480 - (i * 30);
+        iText(210, yPos, rankText, GLUT_BITMAP_HELVETICA_18);
+        iText(300, yPos, scores[i].name, GLUT_BITMAP_HELVETICA_18);
+        iText(460, yPos, levelText, GLUT_BITMAP_HELVETICA_18);
+        iText(550, yPos, scoreText, GLUT_BITMAP_HELVETICA_18);
+    }
+
+    // Display instructions
+    iSetColor(0, 255, 0);
+    iText(350, 50, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
 }
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
@@ -315,7 +410,7 @@ void updatePhysics() {
     {
         if (onGround)  
         {
-            ballDY = jumpSpeed;  
+            ballDY = 15;  
             onGround = false;  
         }
     }
@@ -342,142 +437,49 @@ void updatePhysics() {
     updateCameraPosition();
 }
 
-void saveHighScore(int score) {
-    FILE *file = fopen("highscore.txt", "a+");
+// Save player name and score to highscore.txt
+void savePlayerScore(const char* name, int playerScore, int level) {
+    FILE *file = fopen("highscore.txt", "a");
     if (file != NULL) {
-        fprintf(file, "Player: %d\n", score);  
+        fprintf(file, "%s - Level %d: %d\n", name, level, playerScore);
         fclose(file);
     }
 }
 
 void gameOver() {
-    saveHighScore(score); 
+    if (nameEntered && strlen(playerName) > 0) {
+        savePlayerScore(playerName, score, currentLevel);
+    }
     currentState = STATE_GAME_OVER;
 }
 
+// Display high scores from file
 void displayHighScore() {
     FILE *file = fopen("highscore.txt", "r");
     if (file != NULL) {
-        char line[100];
+        char line[150];
         int highScore = 0;
+        char highScorePlayer[50] = "";
+        
         while (fgets(line, sizeof(line), file)) {
-            int currentScore = 0;
-            sscanf(line, "Player: %d", &currentScore);
-            if (currentScore > highScore) {
-                highScore = currentScore;
+            char tempName[50];
+            int tempLevel, tempScore;
+            
+            // Parse the line format: "Name - Level X: Score"
+            if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3) {
+                if (tempScore > highScore) {
+                    highScore = tempScore;
+                    strcpy(highScorePlayer, tempName);
+                }
             }
         }
         fclose(file);
 
-        char highScoreText[20];
-        sprintf(highScoreText, "High Score: %d", highScore);
-        iSetColor(255, 255, 255);
-        iText(20, 520, highScoreText, GLUT_BITMAP_HELVETICA_18);
-    }
-}
-
-void iKeyboard(unsigned char key,int state)
-{
-    if (key == 'b' && currentState == STATE_PAUSE) 
-    {
-        currentState = STATE_MAIN_MENU;
-        initializeLevel();
-    }
-    if(key=='b' && currentState== STATE_INSTRUCTIONS){
-        currentState = STATE_MAIN_MENU;
-        initializeLevel();
-    }
-    if(key=='b' && currentState== STATE_SETTINGS){
-        currentState = STATE_MAIN_MENU;
-        initializeLevel();
-    }
-    if (key == ' ' && onGround && currentState == STATE_GAME)  
-    {
-        ballDY = jumpSpeed;
-        onGround = false;
-    }
-
-    if (currentState == STATE_GAME_OVER && key == 'b')  
-    {
-        currentState = STATE_MAIN_MENU;  
-        initializeLevel(); 
-        score = 0;
-    }
-    
-    if (key == 'p' && currentState == STATE_GAME) 
-    {
-        currentState = STATE_PAUSE;
-    }
-
-    if (currentState == STATE_PAUSE && key == 'r')  
-    {
-        currentState = STATE_GAME;  
-    }
-    
-    if (currentState == STATE_PAUSE)
-    {
-        if (key == 'r')
-        {
-            currentState = STATE_GAME;
-        }
-        else if (key == 'b')  
-        {
-            currentState = STATE_MAIN_MENU;
-            initializeLevel();
-        }
-    }
-    
-    if (currentState == STATE_LEVEL_SELECT) 
-    {
-        if (key == '1') 
-        {
-            currentLevel = 1;
-            initializeLevel();
-            currentState = STATE_GAME;
-        }
-        else if (key == '2') 
-        {
-            currentLevel = 2;
-            initializeLevel();
-            currentState = STATE_GAME;
-        }
-        else if (key == '3')  
-        {
-            currentLevel = 3;
-            initializeLevel();
-            currentState = STATE_GAME;
-        }
-    }
-
-    if (currentState == STATE_VICTORY && key == 'n') 
-    {
-        if (currentLevel < 3) {
-            currentLevel++;
-            initializeLevel();
-            currentState = STATE_GAME;
-        } else {
-            currentState = STATE_MAIN_MENU;
-            initializeLevel();
-        }
-    }
-    
-    if (currentState == STATE_PLAYER_NAME_INPUT && key != ' ' && key != 13) {  
-        if ((key >= 65 && key <= 90) || (key >= 97 && key <= 122) || key == 8) { 
-            if (key == 8) {
-                if (namelength > 0)
-                    playerName[--namelength] = '\0';
-            } else {
-                if (namelength < 49) {
-                    playerName[namelength++] = key;
-                    playerName[namelength] = '\0';
-                }
-            }
-        }
-    }
-
-    if (key == 13 && currentState != STATE_GAME) {
-        if (currentState == STATE_PLAYER_NAME_INPUT && strlen(playerName) > 0) {  
-            currentState = STATE_LEVEL_SELECT; 
+        if (highScore > 0) {
+            char highScoreText[100];
+            sprintf(highScoreText, "High Score: %s - %d", highScorePlayer, highScore);
+            iSetColor(255, 255, 255);
+            iText(20, 520, highScoreText, GLUT_BITMAP_HELVETICA_18);
         }
     }
 }
@@ -492,39 +494,56 @@ void iDraw()
         bgmplaying = true;
     }
 
-    if (currentState == STATE_MAIN_MENU)
-    {
-        iShowImage(0, 0, "assets/images/wallpaper.bmp");
-        iSetColor(0, 255, 0);
-        iFilledRectangle(btnX, btnY, btnW, btnH);
-        iSetColor(0, 0, 0);
-        iText(btnX + 70, btnY + 15, "Start", GLUT_BITMAP_HELVETICA_18);
-
-        iSetColor(0, 200, 255);
-        iFilledRectangle(btnX + 1 * (btnW + gap), btnY, btnW, btnH);
-        iSetColor(0, 0, 0);
-        iText(btnX + 1 * (btnW + gap) + 40, btnY + 15, "Instructions", GLUT_BITMAP_HELVETICA_18);
-
-        iSetColor(255, 165, 0);
-        iFilledRectangle(btnX + 2 * (btnW + gap), btnY, btnW, btnH);
-        iSetColor(0, 0, 0);
-        iText(btnX + 2 * (btnW + gap) + 60, btnY + 15, "Settings", GLUT_BITMAP_HELVETICA_18);
-
-        iSetColor(255, 0, 0);
-        iFilledRectangle(btnX + 3 * (btnW + gap), btnY, btnW, btnH);
-        iSetColor(0, 0, 0);
-        iText(btnX + 3 * (btnW + gap) + 70, btnY + 15, "Exit", GLUT_BITMAP_HELVETICA_18);
-    }
+   if (currentState == STATE_MAIN_MENU)
+{
+    iShowImage(0, 0, "assets/images/wallpaper.bmp");
+   
+    iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start.bmp");
+    iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions.bmp");
+    iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings.bmp");
+    iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad.bmp");
+    iShowImage(btnX, btnY, "assets/images/Exit.bmp");
+}
+    else if (currentState == STATE_LEADERBOARD)
+{
+    iShowImage(0, 0, "assets/images/wallpaper.bmp"); 
+    displayLeaderboard();
+}
     else if (currentState == STATE_PLAYER_NAME_INPUT) {
         iShowImage(0, 0, "assets/images/name.bmp");
+        
+        // Draw input box
+        iSetColor(255, 255, 255);
+        iFilledRectangle(300, 280, 400, 40);
         iSetColor(0, 0, 0);
-        iText(300, 300, playerName, GLUT_BITMAP_HELVETICA_18);
+        iRectangle(300, 280, 400, 40);
+        
+        // Draw instructions
+        iSetColor(0, 0, 0);
+        iText(300, 350, "Enter your name:", GLUT_BITMAP_HELVETICA_18);
+        iText(300, 250, "Press ENTER when done", GLUT_BITMAP_HELVETICA_12);
+        
+        // Draw player name with cursor
+        char displayName[60];
+        strcpy(displayName, playerName);
+        if (isEnteringName) {
+            strcat(displayName, "_");  // Show cursor
+        }
+        iText(310, 290, displayName, GLUT_BITMAP_HELVETICA_18);
     }
     else if (currentState == STATE_LEVEL_SELECT)
     {
         iShowImage(0, 0, "assets/images/level_select.bmp");
         iSetColor(255, 255, 255);  
         iText(320, 50, "Select a Level by pressing the number", GLUT_BITMAP_HELVETICA_18);
+        
+        // Show player name
+        if (nameEntered && strlen(playerName) > 0) {
+            char welcomeText[80];
+            sprintf(welcomeText, "Welcome, %s!", playerName);
+            iSetColor(255, 255, 0);
+            iText(50, 550, welcomeText, GLUT_BITMAP_HELVETICA_18);
+        }
     }
     else if (currentState == STATE_GAME)
     {
@@ -546,7 +565,13 @@ void iDraw()
         sprintf(scoreText, "Score: %d", score);
         iSetColor(255, 255, 255);
         iText(20, 560, scoreText, GLUT_BITMAP_HELVETICA_18);
-        iShowSpeed(20, 530);
+        
+        // Show player name during game
+        if (nameEntered && strlen(playerName) > 0) {
+            char playerText[60];
+            sprintf(playerText, "Player: %s", playerName);
+            iText(20, 530, playerText, GLUT_BITMAP_HELVETICA_12);
+        }
     }
     else if (currentState == STATE_INSTRUCTIONS)
     {
@@ -584,15 +609,185 @@ void iDraw()
     {
         iShowImage(0, 0, "assets/images/game-over.bmp");
         displayHighScore();
+        
+        // Show current player's score
+        if (nameEntered && strlen(playerName) > 0) {
+            char playerScoreText[100];
+            sprintf(playerScoreText, "%s's Score: %d", playerName, score);
+            iSetColor(255, 255, 0);
+            iText(20, 480, playerScoreText, GLUT_BITMAP_HELVETICA_18);
+        }
     }
     else if (currentState == STATE_VICTORY)
     {
         iShowImage(0, 0, "assets/images/victory.bmp");
         displayHighScore();
+        
+        // Show current player's score
+        if (nameEntered && strlen(playerName) > 0) {
+            char playerScoreText[100];
+            sprintf(playerScoreText, "%s completed Level %d! Score: %d", playerName, currentLevel, score);
+            iSetColor(255, 255, 0);
+            iText(20, 480, playerScoreText, GLUT_BITMAP_HELVETICA_18);
+        }
     }
 }
 
-void iMouseMove(int mx, int my) {}
+void iKeyboard(unsigned char key, int state)
+{
+    // Handle name input
+    if (currentState == STATE_PLAYER_NAME_INPUT) {
+        if (key == '\r' || key == '\n') { // Enter key
+            if (nameLength > 0) {
+                nameEntered = true;
+                isEnteringName = false;
+                currentState = STATE_LEVEL_SELECT;
+            }
+        }
+        else if (key == '\b') { // Backspace
+            if (nameLength > 0) {
+                nameLength--;
+                playerName[nameLength] = '\0';
+            }
+        }
+        else if (key >= 32 && key <= 126 && nameLength < 49) { // Printable characters
+            playerName[nameLength] = key;
+            nameLength++;
+            playerName[nameLength] = '\0';
+        }
+        return;
+    }
+     if (key == 'b' && currentState == STATE_LEADERBOARD) {
+        currentState = STATE_MAIN_MENU;
+    }
+
+    // Rest of keyboard handling
+    if (key == 'b' && currentState == STATE_PAUSE) 
+    {
+        currentState = STATE_MAIN_MENU;
+        initializeLevel();
+    }
+    if(key=='b' && currentState== STATE_INSTRUCTIONS){
+        currentState = STATE_MAIN_MENU;
+        initializeLevel();
+    }
+    if(key=='b' && currentState== STATE_SETTINGS){
+        currentState = STATE_MAIN_MENU;
+        initializeLevel();
+    }
+    if (key == ' ' && onGround && currentState == STATE_GAME)  
+    {
+        ballDY = jumpSpeed;
+        onGround = false;
+    }
+    if (key == GLUT_KEY_UP && onGround && currentState == STATE_GAME)  
+    {
+        ballDY = 10;
+        onGround = false;
+    }
+
+    if (currentState == STATE_GAME_OVER && key == 'b')  
+    {
+        currentState = STATE_MAIN_MENU;  
+        initializeLevel(); 
+        score = 0;
+    }
+    
+    if (key == 'p' && currentState == STATE_GAME) 
+    {
+        currentState = STATE_PAUSE;
+    }
+
+    if (currentState == STATE_PAUSE && key == 'r')  
+    {
+        currentState = STATE_GAME;  
+    }
+    
+    if (currentState == STATE_PAUSE)
+    {
+        if (key == 'r')
+        {
+            currentState = STATE_GAME;
+        }
+        else if (key == 'b')  
+        {
+            currentState = STATE_MAIN_MENU;
+            initializeLevel();
+        }
+    }
+    
+    if (currentState == STATE_VICTORY && key == 'b') {
+        currentState = STATE_LEVEL_SELECT;
+        initializeLevel();
+    }
+    
+    if (currentState == STATE_LEVEL_SELECT) 
+    {
+        if (key == '1') 
+        {
+            currentLevel = 1;
+            initializeLevel();
+            currentState = STATE_GAME;
+        }
+        else if (key == '2') 
+        {
+            currentLevel = 2;
+            initializeLevel();
+            currentState = STATE_GAME;
+        }
+        else if (key == '3')  
+        {
+            currentLevel = 3;
+            initializeLevel();
+            currentState = STATE_GAME;
+        }
+    }
+
+    if (currentState == STATE_VICTORY && key == 'n') 
+    {
+        // Save score when level is completed
+        if (nameEntered && strlen(playerName) > 0) {
+            savePlayerScore(playerName, score, currentLevel);
+        }
+        
+        if (currentLevel < 3) {
+            currentLevel++;
+            initializeLevel();
+            currentState = STATE_GAME;
+        } else {
+            currentState = STATE_MAIN_MENU;
+            initializeLevel();
+        }
+    }
+}
+
+void iMouseMove(int mx, int my) {
+    if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
+            {
+                 iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start1.bmp");
+            }
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH)
+            {
+             iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions1.bmp");
+   
+            }
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH)
+            {
+              
+              iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings1.bmp");
+  
+            }
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH)
+            {
+                
+              
+            iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad1.bmp");
+            }
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
+            {
+           iShowImage(btnX, btnY, "assets/images/exit1.bmp");
+            }
+}
 void iMouseDrag(int mx, int my) {}
 void iMouseWheel(int dir, int mx, int my) {}
 
@@ -602,23 +797,33 @@ void iMouse(int button, int state, int mx, int my)
     {
         if (currentState == STATE_MAIN_MENU)
         {
-            if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
+            if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
             {
-                currentState = STATE_PLAYER_NAME_INPUT;
+                // Check if player name is already entered
+                if (!nameEntered || strlen(playerName) == 0) {
+                    currentState = STATE_PLAYER_NAME_INPUT;
+                    isEnteringName = true;
+                } else {
+                    currentState = STATE_LEVEL_SELECT;
+                }
             }
-            else if (mx >= btnX + 1 * (btnW + gap) && mx <= btnX + 1 * (btnW + gap) + btnW &&
-                     my >= btnY && my <= btnY + btnH)
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH)
             {
                 currentState = STATE_INSTRUCTIONS;
             }
-            else if (mx >= btnX + 2 * (btnW + gap) && mx <= btnX + 2 * (btnW + gap) + btnW &&
-                     my >= btnY && my <= btnY + btnH)
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH)
             {
-                currentState = STATE_SETTINGS;
+               currentState = STATE_SETTINGS;
             }
-            else if (mx >= btnX + 3 * (btnW + gap) && mx <= btnX + 3 * (btnW + gap) + btnW &&
-                     my >= btnY && my <= btnY + btnH)
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH)
             {
+                
+                 currentState = STATE_LEADERBOARD;  // Add leaderboard button
+            }
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
+            {
+                // Reset player name when exiting
+                initializePlayerName();
                 exit(0);
             }
         }
