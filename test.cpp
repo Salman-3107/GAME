@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <windows.h>
 
 // Game states using enum
 typedef enum
@@ -25,7 +26,8 @@ typedef enum
 GameState currentState = STATE_MAIN_MENU;
 bool bgmplaying = false;
 bool gameRunning = true;
-
+//hover buttion
+int hoveredButton = -1; 
 //co-ordinate
 int x,y;
 // Ball
@@ -48,7 +50,19 @@ typedef struct {
     int score;
     int level;
 } HighScore;
+//moving enemy 
+typedef struct {
+    int x, y;           // Grid position
+    float offset;       // Current offset from grid position
+    float speed;        // Movement speed
+    int direction;      // 1 for right, -1 for left
+    bool active;        // Whether enemy is active
+    float timer;        // Individual timer for each enemy
+} Enemy;
 
+#define MAX_ENEMIES 50
+Enemy enemies[MAX_ENEMIES];
+int enemyCount = 0;
 //compare
 int compareScores(const void *a, const void *b) {
     HighScore *scoreA = (HighScore *)a;
@@ -60,6 +74,8 @@ char playerName[50] = "";
 int nameLength = 0;
 bool nameEntered = false;  // Flag to track if name has been entered this session
 bool isEnteringName = false;  // Flag for name input state
+
+
 
 // Map 
 #define MAX_MAP_WIDTH 120
@@ -76,12 +92,12 @@ char level1[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]= {
 };
 char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "######################################################################################################################",
-    "##........................##......##..............................##.................##.........##...##..............#",
-    "##.....................P..##......##..............................##.................##.........##...................#",
-    "##.............#########..##..##.........#####....................##........c........##.....................#........#",
-    "##.............##.....##..##..##.........#####....................##.......##........##.........c....##...###........#",
-    "##.............##.............##.........#####............................####..................##...##.....#........#",
-    "##xxxx..o....|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx..G#",
+    "#.........................##......##..............................##.................##.........##...##..............#",
+    "#......................P..##......##..............................##.................##.........##...................#",
+    "#..............#########..##..##.........#####....................##........c........##.....................#........#",
+    "#..............##.....##..##..##.........#####....................##.......##........##.........c....##...###........#",
+    "#..............##.............##.........#####............................####..................##...##.....#........#",
+    "#.xx....o....|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx..G#",
     "######################################################################################################################"
 };
 
@@ -95,7 +111,16 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "##########....###..##.###..|...P..........###..####.P....#####.#",
     "################################################################"
 };
-
+//map backup
+char level1_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
+char level2_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
+char level3_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
+void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void backupOriginalMaps() {
+    memcpy(level1_original, level1, sizeof(level1));
+    memcpy(level2_original, level2, sizeof(level2));
+    memcpy(level3_original, level3, sizeof(level3));
+}
 // Camera position
 float cameraX = 0, cameraY = 0;
 int blockSize = 75;
@@ -104,7 +129,12 @@ int visibleHeight = 600;
 
 // Button variables for Main Menu
 int btnX = 800, btnY = 100, btnW = 200, btnH = 50, gap = 20;
-
+//
+void restoreOriginalMaps() {
+    memcpy(level1, level1_original, sizeof(level1));
+    memcpy(level2, level2_original, sizeof(level2));
+    memcpy(level3, level3_original, sizeof(level3));
+}
 // Initialize game for new level
 void initializeLevel() {
     ballX = 200;
@@ -116,6 +146,90 @@ void initializeLevel() {
     onGround = false;
     cameraX = 0;
     cameraY = 0;
+    if (currentLevel == 1) {
+        initializeEnemies(level1);
+    } else if (currentLevel == 2) {
+        initializeEnemies(level2);
+    } else if (currentLevel == 3) {
+        initializeEnemies(level3);
+    }
+        restoreOriginalMaps();
+
+}
+//moving enemies
+void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
+    enemyCount = 0;
+    
+    for (int y = 0; y < MAX_MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAX_MAP_WIDTH; x++) {
+            if (map[y][x] == 'x') {
+                if (enemyCount < MAX_ENEMIES) {
+                    enemies[enemyCount].x = x;
+                    enemies[enemyCount].y = y;
+                    enemies[enemyCount].offset = 0;
+                    // Give each enemy a slightly different speed for variety
+                    enemies[enemyCount].speed = 1.0f + (rand() % 3) * 0.3f;
+                    enemies[enemyCount].direction = (rand() % 2) ? 1 : -1;
+                    enemies[enemyCount].active = true;
+                    // Give each enemy a different starting timer
+                    enemies[enemyCount].timer = rand() % 100;
+                    enemyCount++;
+                }
+                // Remove 'x' from map since we're now tracking it separately
+                map[y][x] = '.';
+            }
+        }
+    }
+}
+//position for enemy 
+void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
+    for (int i = 0; i < enemyCount; i++) {
+        if (!enemies[i].active) continue;
+        
+        // Update individual timer
+        enemies[i].timer += 1.0f;
+        
+        // Move enemy based on its individual timer and speed
+        enemies[i].offset += enemies[i].direction * enemies[i].speed * 0.02f;
+        
+        // Check boundaries and reverse direction
+        // Move within a range of 3 blocks (1.5 blocks each side)
+        if (enemies[i].offset > 1.5f) {
+            enemies[i].offset = 1.5f;
+            enemies[i].direction = -1;
+        } else if (enemies[i].offset < -1.5f) {
+            enemies[i].offset = -1.5f;
+            enemies[i].direction = 1;
+        }
+        
+        // Also check for wall collisions
+        int checkX = enemies[i].x + (int)enemies[i].offset;
+        if (checkX >= 0 && checkX < MAX_MAP_WIDTH && 
+            enemies[i].y >= 0 && enemies[i].y < MAX_MAP_HEIGHT) {
+            if (map[enemies[i].y][checkX] == '#') {
+                enemies[i].direction = -enemies[i].direction;
+            }
+        }
+    }
+}
+//drawing enemy
+void drawEnemies() {
+    for (int i = 0; i < enemyCount; i++) {
+        if (!enemies[i].active) continue;
+        
+        // Calculate screen position
+        float worldX = (enemies[i].x + enemies[i].offset) * blockSize;
+        float worldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize;
+        
+        int screenX = (int)(worldX - cameraX);
+        int screenY = (int)(worldY - cameraY);
+        
+        // Only draw if on screen
+        if (screenX > -blockSize && screenX < visibleWidth + blockSize &&
+            screenY > -blockSize && screenY < visibleHeight + blockSize) {
+            iShowImage(screenX, screenY, "assets/images/enemy.bmp");
+        }
+    }
 }
 
 // Initialize player name for new game session
@@ -199,7 +313,8 @@ void displayLeaderboard() {
 }
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
-    // Only draw tiles that are visible on screen
+    
+    // Draw normal map elements (excluding 'x' since we handle them separately)
     int startX = (int)(cameraX / blockSize) - 1;
     int endX = (int)((cameraX + visibleWidth) / blockSize) + 1;
     int startY = 0;
@@ -232,9 +347,32 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
             else if(currentChar == '|'){
                 iShowImage(posX, posY, "assets/images/spike-main.bmp");
             }
-            else if(currentChar == 'x'){
-                iShowImage(posX, posY, "assets/images/enemy.bmp");
-            }
+            // Note: 'x' is handled separately in drawEnemies()
+        }
+    }
+    
+    // Draw enemies
+    drawEnemies();
+}
+//collision with enemy 
+void checkEnemyCollision() {
+    for (int i = 0; i < enemyCount; i++) {
+        if (!enemies[i].active) continue;
+        
+        // Calculate enemy world position
+        float enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
+        float enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
+        
+        // Calculate distance between ball and enemy
+        float dx = ballX - enemyWorldX;
+        float dy = ballY - enemyWorldY;
+        float distance = sqrt(dx * dx + dy * dy);
+        
+        // Check if collision occurred (ball radius + enemy radius)
+        if (distance < ballRadius + (blockSize / 2) * 0.8f) {
+            // Game over - go back to main menu
+            currentState = STATE_GAME_OVER;
+            return;
         }
     }
 }
@@ -432,9 +570,11 @@ void updatePhysics() {
     checkSpikeCollision(currentMap);
     checkVictory(currentMap);
     collection(currentMap);
-    
+    updateEnemies(currentMap);
     limitBallPosition();
     updateCameraPosition();
+    checkEnemyCollision();  
+
 }
 
 // Save player name and score to highscore.txt
@@ -494,15 +634,39 @@ void iDraw()
         bgmplaying = true;
     }
 
-   if (currentState == STATE_MAIN_MENU)
-{
+   if (currentState == STATE_MAIN_MENU) {
     iShowImage(0, 0, "assets/images/wallpaper.bmp");
    
-    iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start.bmp");
-    iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions.bmp");
-    iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings.bmp");
-    iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad.bmp");
-    iShowImage(btnX, btnY, "assets/images/Exit.bmp");
+    // Draw buttons based on hover state
+    if (hoveredButton == 0) {
+        iShowImage(btnX-15, btnY + 4 * (btnH + gap), "assets/images/start1.bmp");
+    } else {
+        iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start.bmp");
+    }
+    
+    if (hoveredButton == 1) {
+        iShowImage(btnX-15, btnY + 3 * (btnH + gap), "assets/images/instructions1.bmp");
+    } else {
+        iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions.bmp");
+    }
+    
+    if (hoveredButton == 2) {
+        iShowImage(btnX-15, btnY + (btnH + gap), "assets/images/settings1.bmp");
+    } else {
+        iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings.bmp");
+    }
+    
+    if (hoveredButton == 3) {
+        iShowImage(btnX-15, btnY + 2 * (btnH + gap), "assets/images/leaderboad1.bmp");
+    } else {
+        iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad.bmp");
+    }
+    
+    if (hoveredButton == 4) {
+        iShowImage(btnX-15, btnY, "assets/images/exit1.bmp");
+    } else {
+        iShowImage(btnX, btnY, "assets/images/Exit.bmp");
+    }
 }
     else if (currentState == STATE_LEADERBOARD)
 {
@@ -762,31 +926,29 @@ void iKeyboard(unsigned char key, int state)
 }
 
 void iMouseMove(int mx, int my) {
-    if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
-            {
-                 iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start1.bmp");
-            }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH)
-            {
-             iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions1.bmp");
-   
-            }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH)
-            {
-              
-              iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings1.bmp");
-  
-            }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH)
-            {
-                
-              
-            iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad1.bmp");
-            }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
-            {
-           iShowImage(btnX, btnY, "assets/images/exit1.bmp");
-            }
+    if (currentState == STATE_MAIN_MENU) {
+        if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH) {
+            hoveredButton = 0;  // Start button
+        }
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH) {
+            hoveredButton = 1;  // Instructions button
+        }
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH) {
+            hoveredButton = 2;  // Settings button
+        }
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH) {
+            hoveredButton = 3;  // Leaderboard button
+        }
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
+            hoveredButton = 4;  // Exit button
+        }
+        else {
+            hoveredButton = -1;  // No button hovered
+        }
+    }
+    else {
+        hoveredButton = -1;  // Reset when not in main menu
+    }
 }
 void iMouseDrag(int mx, int my) {}
 void iMouseWheel(int dir, int mx, int my) {}
@@ -852,7 +1014,8 @@ int main(int argc, char *argv[])
     
     // Initialize player name
     playerName[0] = '\0';
-    
+    backupOriginalMaps();
+
     glutInit(&argc, argv);
     iInitializeSound();
     glutTimerFunc(16, iMovement, 0);
