@@ -761,7 +761,7 @@ void iDraw()
             iShowImage(0, 0, "assets/images/level3.bmp");
             drawMap(level3);
         }
-
+iShowSpeed(940,550);
         iSetColor(255, 0, 0);
         iFilledCircle(ballX - cameraX, ballY - cameraY, ballRadius);
 
