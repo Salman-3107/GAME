@@ -24,7 +24,13 @@ typedef enum
 } GameState;
 
 GameState currentState = STATE_MAIN_MENU;
-bool bgmplaying = false;
+
+int bgmChannel = -1;  // Track the background music channel
+int soundEffectChannel = -1;  // Track sound effect channels
+
+bool bgmInitialized = false;
+bool bgmplaying = false;  
+bool soundEnabled = true;
 bool gameRunning = true;
 //hover buttion
 int hoveredButton = -1; 
@@ -37,6 +43,10 @@ float ballDY = 0;
 float ballDx = 0;
 float gravity = -0.7;  
 bool onGround = false;  
+//sound button 
+int soundOnBtnX = 300, soundOnBtnY = 350, soundBtnW = 150, soundBtnH = 50;
+int soundOffBtnX = 500, soundOffBtnY = 350;
+
 
 float vx = 0, vy = 0;
 float moveSpeed = 7;
@@ -72,10 +82,10 @@ int compareScores(const void *a, const void *b) {
 // Player name system
 char playerName[50] = ""; 
 int nameLength = 0;
-bool nameEntered = false;  // Flag to track if name has been entered this session
+bool nameEntered = false;  // Flag to track 
 bool isEnteringName = false;  // Flag for name input state
 
-
+void gameOver();
 
 // Map 
 #define MAX_MAP_WIDTH 120
@@ -102,14 +112,14 @@ char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
 };
 
 char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
-    "################################################################",
-    "###...######........##..#####.......##..#....##..##.........P###",
-    "###...######..#####..###......##...###.............#...P.....###",
-    "###..#####..###########...###..###....c...##..#....##.....######",
-    "###....###..#####....#.....P.....##....##....c..........###..###",
-    "####....###..####....##...........#...........|..............###",
-    "##########....###..##.###..|...P..........###..####.P....#####.#",
-    "################################################################"
+"######################################################################################",
+"#......|.....................|.............................|.........|............||.#",
+"#....................................................................................#",
+"#......c............................P....................c...........................#",
+"#.....#............................###...............................................#",
+"#....###...........................###............xx.................................#",
+"#|.#####..o...|...xxx.......|......###.....|||.....x...c..................P....xx...c#",
+"######################################################################################"
 };
 //map backup
 char level1_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
@@ -134,6 +144,20 @@ void restoreOriginalMaps() {
     memcpy(level1, level1_original, sizeof(level1));
     memcpy(level2, level2_original, sizeof(level2));
     memcpy(level3, level3_original, sizeof(level3));
+}
+//sound on off
+void toggleSound(bool enable) {
+    soundEnabled = enable;
+    if (!enable) {
+        // Stop all sounds when disabled
+        iStopAllSounds();
+        bgmChannel = -1;
+        bgmplaying = false;
+        bgmInitialized = false;
+    } else {
+        // When enabling sound, reset the initialization flag
+        bgmInitialized = false;
+    }
 }
 // Initialize game for new level
 void initializeLevel() {
@@ -245,6 +269,8 @@ void displayLeaderboard() {
     if (file == NULL) {
         iSetColor(255, 255, 255);
         iText(400, 300, "No high scores yet!", GLUT_BITMAP_HELVETICA_18);
+        iSetColor(0, 23, 66);
+        iText(350, 30, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
         return;
     }
 
@@ -259,10 +285,28 @@ void displayLeaderboard() {
         
         // Parse the line format: "Name - Level X: Score"
         if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3) {
-            strcpy(scores[count].name, tempName);
-            scores[count].level = tempLevel;
-            scores[count].score = tempScore;
-            count++;
+            // Check if this player already exists in our array
+            int existingIndex = -1;
+            for (int i = 0; i < count; i++) {
+                if (strcmp(scores[i].name, tempName) == 0) {
+                    existingIndex = i;
+                    break;
+                }
+            }
+            
+            if (existingIndex != -1) {
+                // Player exists, keep the higher score
+                if (tempScore > scores[existingIndex].score) {
+                    scores[existingIndex].level = tempLevel;
+                    scores[existingIndex].score = tempScore;
+                }
+            } else {
+                // New player, add to array
+                strcpy(scores[count].name, tempName);
+                scores[count].level = tempLevel;
+                scores[count].score = tempScore;
+                count++;
+            }
         }
     }
     fclose(file);
@@ -308,8 +352,8 @@ void displayLeaderboard() {
     }
 
     // Display instructions
-    iSetColor(0, 255, 0);
-    iText(350, 50, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
+    iSetColor(0, 23, 66);
+    iText(350, 40, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
 }
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
@@ -371,7 +415,7 @@ void checkEnemyCollision() {
         // Check if collision occurred (ball radius + enemy radius)
         if (distance < ballRadius + (blockSize / 2) * 0.8f) {
             // Game over - go back to main menu
-            currentState = STATE_GAME_OVER;
+          gameOver(); 
             return;
         }
     }
@@ -420,25 +464,25 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileX] == '|') {
-            currentState = STATE_GAME_OVER; 
+            gameOver();  
         }
     }
 
     if (tileYAbove >= 0 && tileYAbove < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYAbove][tileX] == '|') {
-            currentState = STATE_GAME_OVER; 
+            gameOver();  
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXLeft >= 0 && tileXLeft < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXLeft] == '|') {
-            currentState = STATE_GAME_OVER; 
+            gameOver();  
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXRight >= 0 && tileXRight < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXRight] == '|') {
-            currentState = STATE_GAME_OVER; 
+            gameOver();  
         }
     }
 }
@@ -513,8 +557,10 @@ void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
     if (tileY >= 0 && tileY < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileY][tileX] == 'c') { 
             score += 10;  
-            iPlaySound("assets/sounds/chime.wav", false); 
-            map[tileY][tileX] = '.'; 
+          if (soundEnabled) {  // play sound if enabled
+                iPlaySound("assets/sounds/chime.wav", false); 
+            }       
+                map[tileY][tileX] = '.'; 
         }
     }
 }
@@ -522,7 +568,7 @@ void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
 void updatePhysics() {
     if(currentState != STATE_GAME) return;
     
-    // Get current level map
+    // Get current map
     char (*currentMap)[MAX_MAP_WIDTH] = NULL;
     if (currentLevel == 1) currentMap = level1;
     else if (currentLevel == 2) currentMap = level2;
@@ -605,7 +651,7 @@ void displayHighScore() {
             char tempName[50];
             int tempLevel, tempScore;
             
-            // Parse the line format: "Name - Level X: Score"
+            // format: "Name - Level X: Score"
             if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3) {
                 if (tempScore > highScore) {
                     highScore = tempScore;
@@ -628,12 +674,13 @@ void iDraw()
 {
     iClear();
 
-    if (!bgmplaying)
-    {
-        iPlaySound("assets/sounds/game_audio.wav", true);
-        bgmplaying = true;
+     if (soundEnabled && !bgmInitialized) {
+        bgmChannel = iPlaySound("assets/sounds/game_audio.wav", true, 60);  // Loop background music
+        if (bgmChannel != -1) {
+            bgmplaying = true;
+            bgmInitialized = true;
+        }
     }
-
    if (currentState == STATE_MAIN_MENU) {
     iShowImage(0, 0, "assets/images/wallpaper.bmp");
    
@@ -670,23 +717,15 @@ void iDraw()
 }
     else if (currentState == STATE_LEADERBOARD)
 {
-    iShowImage(0, 0, "assets/images/wallpaper.bmp"); 
+    iShowImage(0, 0, "assets/images/leaderboard_show.bmp"); 
     displayLeaderboard();
 }
     else if (currentState == STATE_PLAYER_NAME_INPUT) {
         iShowImage(0, 0, "assets/images/name.bmp");
         
-        // Draw input box
-        iSetColor(255, 255, 255);
-        iFilledRectangle(300, 280, 400, 40);
+      
+      
         iSetColor(0, 0, 0);
-        iRectangle(300, 280, 400, 40);
-        
-        // Draw instructions
-        iSetColor(0, 0, 0);
-        iText(300, 350, "Enter your name:", GLUT_BITMAP_HELVETICA_18);
-        iText(300, 250, "Press ENTER when done", GLUT_BITMAP_HELVETICA_12);
-        
         // Draw player name with cursor
         char displayName[60];
         strcpy(displayName, playerName);
@@ -748,9 +787,50 @@ void iDraw()
         iText(120, 340, "- Prevent the ball from falling below.", GLUT_BITMAP_HELVETICA_18);
         iText(120, 310, "- Press 'b' to return to the Main Menu.", GLUT_BITMAP_HELVETICA_18);
     }
-    else if(currentState == STATE_SETTINGS)
+   else if (currentState == STATE_SETTINGS)
     {
-        iShowImage(0, 0, "assets/images/settings-main.bmp");
+        iShowImage(0, 0, "assets/images/settings_menu.bmp");
+        
+        // Sound settings title
+        iSetColor(0,26,66);
+        iText(400, 450, "Sound Settings", GLUT_BITMAP_TIMES_ROMAN_24);
+        
+        // Sound ON button - improved visual feedback
+        if (soundEnabled) {
+            iSetColor(0, 200, 0);  // Bright green when active
+            iFilledRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);
+            iSetColor(255, 255, 255);  // White text for contrast
+            iRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);  // Border
+        } else {
+            iSetColor(60, 60, 60);  // Dark gray when inactive
+            iFilledRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);
+            iSetColor(150, 150, 150);  // Light gray text
+        }
+        iText(soundOnBtnX + 45, soundOnBtnY + 20, "SOUND ON", GLUT_BITMAP_HELVETICA_18);
+        
+        // Sound OFF button - improved visual feedback
+        if (!soundEnabled) {
+            iSetColor(200, 0, 0);  // Bright red when active
+            iFilledRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);
+            iSetColor(255, 255, 255);  // White text for contrast
+            iRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);  // Border
+        } else {
+            iSetColor(60, 60, 60);  // Dark gray when inactive
+            iFilledRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);
+            iSetColor(150, 150, 150);  // Light gray text
+        }
+        iText(soundOffBtnX + 40, soundOffBtnY + 20, "SOUND OFF", GLUT_BITMAP_HELVETICA_18);
+        
+        // Instructions
+        iSetColor(0,26,66);
+        iText(350, 200, "Click to toggle sound on/off", GLUT_BITMAP_HELVETICA_18);
+        iText(350, 50, "Press 'b' to return to Main Menu", GLUT_BITMAP_HELVETICA_18);
+        
+        // Show current status
+        iSetColor(255, 255, 0);
+        char statusText[50];
+        sprintf(statusText, "Current Status: %s", soundEnabled ? "Sound ON" : "Sound OFF");
+        iText(350, 250, statusText, GLUT_BITMAP_HELVETICA_18);
     }
     else if (currentState == STATE_PAUSE)
     {
@@ -799,6 +879,8 @@ void iDraw()
 
 void iKeyboard(unsigned char key, int state)
 {
+        if (state != GLUT_DOWN) return;
+
     // Handle name input
     if (currentState == STATE_PLAYER_NAME_INPUT) {
         if (key == '\r' || key == '\n') { // Enter key
@@ -824,8 +906,11 @@ void iKeyboard(unsigned char key, int state)
      if (key == 'b' && currentState == STATE_LEADERBOARD) {
         currentState = STATE_MAIN_MENU;
     }
+    if(key == 'b' && currentState ==STATE_LEVEL_SELECT){
+        currentState = STATE_MAIN_MENU;
+        initializeLevel();
+    }
 
-    // Rest of keyboard handling
     if (key == 'b' && currentState == STATE_PAUSE) 
     {
         currentState = STATE_MAIN_MENU;
@@ -959,9 +1044,9 @@ void iMouse(int button, int state, int mx, int my)
     {
         if (currentState == STATE_MAIN_MENU)
         {
+            // Your existing main menu click handling...
             if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
             {
-                // Check if player name is already entered
                 if (!nameEntered || strlen(playerName) == 0) {
                     currentState = STATE_PLAYER_NAME_INPUT;
                     isEnteringName = true;
@@ -979,14 +1064,33 @@ void iMouse(int button, int state, int mx, int my)
             }
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH)
             {
-                
-                 currentState = STATE_LEADERBOARD;  // Add leaderboard button
+                currentState = STATE_LEADERBOARD; 
             }
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
             {
-                // Reset player name when exiting
                 initializePlayerName();
+                // Clean up sound before exiting
+                iFreeSound();
                 exit(0);
+            }
+        }
+        else if (currentState == STATE_SETTINGS)
+        {
+            // Sound ON button clicked
+            if (mx >= soundOnBtnX && mx <= soundOnBtnX + soundBtnW && 
+                my >= soundOnBtnY && my <= soundOnBtnY + soundBtnH)
+            {
+                if (!soundEnabled) {  // Only toggle if currently off
+                    toggleSound(true);
+                }
+            }
+            // Sound OFF button clicked
+            else if (mx >= soundOffBtnX && mx <= soundOffBtnX + soundBtnW && 
+                     my >= soundOffBtnY && my <= soundOffBtnY + soundBtnH)
+            {
+                if (soundEnabled) {  // Only toggle if currently on
+                    toggleSound(false);
+                }
             }
         }
     }
@@ -1020,6 +1124,7 @@ int main(int argc, char *argv[])
     iInitializeSound();
     glutTimerFunc(16, iMovement, 0);
     iOpenWindow(1000, 600, "Bounce Classic");
-    
+    atexit(iFreeSound);
+
     return 0;
 }
