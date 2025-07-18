@@ -939,11 +939,17 @@ else if(currentState == STATE_ABOUT_US)
 
     iShowImage(0, 0, "assets/images/about_us_main.bmp");
     iSetColor(0, 0, 0);
-    iText(120, 400, "About Us:", GLUT_BITMAP_TIMES_ROMAN_24);
+    
 
-    iText(120, 370, "- We are Salman Faresi and Mahibur Rahman Fahim, students of Computer Science and Engineering at BUET, united by a shared passion for crafting interactive digital experiences." , GLUT_BITMAP_TIMES_ROMAN_24);
-iText(120,340,"Under the thoughtful guidance of Mahir Labib Dihan, Adjunct Lecturer at BUET, this rendition of Bounce Classic was born—not merely as a programming exercise, but as a tribute to the timeless joy of retro gaming ." , GLUT_BITMAP_TIMES_ROMAN_24);
-iText(120,310," With each line of code, we sought to breathe new life into a beloved classic, blending nostalgia with innovation in the spirit of learning and creativity." , GLUT_BITMAP_TIMES_ROMAN_24);
+    iText(100, 400, "-- We are Salman Faresi and Mahibur Rahman Fahim, " , GLUT_BITMAP_TIMES_ROMAN_24);
+    
+    iText(100,370,"students of Computer Science and Engineering at BUET,", GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,340,"united by a shared passion for crafting interactive digital experiences.", GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,310,"Under the thoughtful guidance of Mahir Labib Dihan, Adjunct Lecturer at BUET,", GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,280," this rendition of Bounce Classic was born—not merely as a programming exercise," , GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,250,"but as a tribute to the timeless joy of retro gaming.With each line of code,", GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,220," we sought to breathe new life into a beloved classic,", GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,190,"blending nostalgia with innovation in the spirit of learning and creativity. --", GLUT_BITMAP_TIMES_ROMAN_24);
 
 
 }
