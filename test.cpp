@@ -739,7 +739,7 @@ void iDraw()
     {
         iShowImage(0, 0, "assets/images/level_select.bmp");
         iSetColor(255, 255, 255);  
-        iText(320, 50, "Select a Level by pressing the number", GLUT_BITMAP_HELVETICA_18);
+        iText(320, 50, "Select a Level by pressing the number or by the mouse", GLUT_BITMAP_HELVETICA_18);
         
         // Show player name
         if (nameEntered && strlen(playerName) > 0) {
@@ -748,7 +748,41 @@ void iDraw()
             iSetColor(255, 255, 0);
             iText(50, 550, welcomeText, GLUT_BITMAP_HELVETICA_18);
         }
+    
+// if(hoveredButton == 0) {
+//             iShowImage(btnX-15, btnY + 3 * (btnH + gap), "assets/images/level1_1.bmp");
+//         }   
+//         else
+//         {
+//             iShowImage(btnX,btnY + 3*(btnH + gap), "assets/images/level1.bmp");
+//         }
+//  if(hoveredButton == 1) {
+//             iShowImage(btnX-15, btnY + 2 * (btnH + gap), "assets/images/level2_1.bmp");
+//         }
+//         else
+//         {
+//             iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/level2.bmp");
+//         }
+
+//  if(hoveredButton == 2) {
+
+//             iShowImage(btnX-15, btnY + (btnH + gap), "assets/images/level3_1.bmp");
+//         }
+//         else
+//         {
+//             iShowImage(btnX, btnY + (btnH + gap), "assets/images/level3.bmp");
+//         }
+
+
+
+
+
+
+
+
+
     }
+    
     else if (currentState == STATE_GAME)
     {
         if (currentLevel == 1) {
@@ -781,12 +815,14 @@ iShowSpeed(940,550);
     {
         iShowImage(0, 0, "assets/images/instruction-main.bmp");
         iSetColor(123, 187, 23);
-        iFilledRectangle(120, 300, 430, 120);
+        // iFilledRectangle(120, 260, 700, 200);
+
         iSetColor(0, 0, 0);
         iText(120, 400, "Instructions:", GLUT_BITMAP_TIMES_ROMAN_24);
-        iText(120, 370, "- Use LEFT and RIGHT arrow keys to move the ball.", GLUT_BITMAP_HELVETICA_18);
-        iText(120, 340, "- Prevent the ball from falling below.", GLUT_BITMAP_HELVETICA_18);
-        iText(120, 310, "- Press 'b' to return to the Main Menu.", GLUT_BITMAP_HELVETICA_18);
+        iText(120, 370, "- Use LEFT and RIGHT arrow keys to move the ball & SPACEBAR for jumping.", GLUT_BITMAP_HELVETICA_18);
+        iText(120, 340, "- Beware of the spikes and butterflies.", GLUT_BITMAP_HELVETICA_18);
+        iText(120, 310, "- The coins worth 10 points each,you have 3 lives to complete each level.", GLUT_BITMAP_HELVETICA_18);
+        iText(120, 280, "- Press 'b' to return to the Main Menu.", GLUT_BITMAP_HELVETICA_18);
     }
    else if (currentState == STATE_SETTINGS)
     {
@@ -878,9 +914,11 @@ iShowSpeed(940,550);
     }
 }
 
+
+
 void iKeyboard(unsigned char key, int state)
 {
-        if (state != GLUT_DOWN) return;
+        if (state != GLUT_DOWN)  return;
 
     // Handle name input
     if (currentState == STATE_PLAYER_NAME_INPUT) {
@@ -1032,6 +1070,21 @@ void iMouseMove(int mx, int my) {
             hoveredButton = -1;  // No button hovered
         }
     }
+
+    else if(currentState == STATE_LEVEL_SELECT)
+    {
+        if (mx >= 50 && mx <= 320 && my >= 50 && my <= 300) {
+            hoveredButton = 0;  // Level 1 button
+        }
+        else if (mx >= 350 && mx <= 620 && my >= 50 && my <= 300) {
+            hoveredButton = 1;  // Level 2 button
+        }
+        else if (mx >= 650 && mx <= 920 && my >= 50 && my <= 300) {
+            hoveredButton = 2;  // Level 3 button
+        }}
+        
+
+    
     else {
         hoveredButton = -1;  // Reset when not in main menu
     }
@@ -1075,6 +1128,34 @@ void iMouse(int button, int state, int mx, int my)
                 exit(0);
             }
         }
+        else if (currentState == STATE_PLAYER_NAME_INPUT)
+        {
+            // Handle mouse clicks in name input state  
+            if (mx >= 310 && mx <= 600 && my >= 290 && my <= 320) {
+                isEnteringName = true;  // Clicked in the input area
+            } else {
+                isEnteringName = false;  // Clicked outside the input area
+            }
+        }
+        else if (currentState == STATE_LEVEL_SELECT)
+        {
+            // Handle level selection
+            if (mx >= 50 && mx <= 320 && my >= 50 && my <= 300) {
+                currentLevel = 1;
+                initializeLevel();
+                currentState = STATE_GAME;
+            } else if (mx >= 350 && mx <= 620 && my >= 50 && my <= 300) {
+                currentLevel = 2;
+                initializeLevel();
+                currentState = STATE_GAME;
+            } else if (mx >= 650 && mx <= 920 && my >= 50 && my <= 300) {
+                currentLevel = 3;
+                initializeLevel();
+                currentState = STATE_GAME;
+            }
+        }
+
+
         else if (currentState == STATE_SETTINGS)
         {
             // Sound ON button clicked
