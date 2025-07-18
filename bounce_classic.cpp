@@ -23,11 +23,22 @@ typedef enum
     STATE_GAME_OVER,
     STATE_LEADERBOARD
 } GameState;
-
+//ball rotation
+float ballRotation = 0.0f;
 GameState currentState = STATE_MAIN_MENU;
 int lives=3;
 int bgmChannel = -1;  // Track the background music channel
 int soundEffectChannel = -1;  // Track sound effect channels
+//checkpoint
+typedef struct {
+    float x, y;
+    bool activated;
+} Checkpoint;
+#define MAX_CHECKPOINTS 10
+Checkpoint checkpoints[MAX_CHECKPOINTS];
+int checkpointCount = 0;
+int lastCheckpointIndex = -1; // Index of last activated checkpoint
+float lastCheckpointX = 200, lastCheckpointY = 300; // Default spawn position
 
 bool bgmInitialized = false;
 bool bgmplaying = false;  
@@ -70,6 +81,9 @@ typedef struct {
     bool active;        // Whether enemy is active
     float timer;        // Individual timer for each enemy
 } Enemy;
+
+
+
 
 #define MAX_ENEMIES 50
 Enemy enemies[MAX_ENEMIES];
@@ -123,6 +137,10 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
 "######################################################################################"
 
 };
+
+//ini
+void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) ;
+void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) ;
 //map backup
 char level1_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
 char level2_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
@@ -169,22 +187,99 @@ void initializeLevel() {
     ballDx = 0;
     vx = 0;
     vy = 0;
-    score=0;
+    score = 0;
+    ballRotation = 0.0f;
     
-
     onGround = false;
     cameraX = 0;
     cameraY = 0;
+    
+    // Initialize checkpoints for current level
     if (currentLevel == 1) {
         initializeEnemies(level1);
+        initializeCheckpoints(level1);
     } else if (currentLevel == 2) {
         initializeEnemies(level2);
+        initializeCheckpoints(level2);
     } else if (currentLevel == 3) {
         initializeEnemies(level3);
+        initializeCheckpoints(level3);
     }
-        restoreOriginalMaps();
-
+    
+    restoreOriginalMaps();
 }
+//checkpoint indicate
+void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
+    checkpointCount = 0;
+    lastCheckpointIndex = -1;
+    lastCheckpointX = 200;
+    lastCheckpointY = 300;
+    
+    for (int y = 0; y < MAX_MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAX_MAP_WIDTH; x++) {
+            if (map[y][x] == 'P') {
+                if (checkpointCount < MAX_CHECKPOINTS) {
+                    checkpoints[checkpointCount].x = x * blockSize + blockSize / 2;
+                    checkpoints[checkpointCount].y = (MAX_MAP_HEIGHT - y - 1) * blockSize + blockSize / 2;
+                    checkpoints[checkpointCount].activated = false;
+                    checkpointCount++;
+                }
+            }
+        }
+    }
+}
+//checkpoint collision hit 
+void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
+    for (int i = 0; i < checkpointCount; i++) {
+        if (!checkpoints[i].activated) {
+            float dx = ballX - checkpoints[i].x;
+            float dy = ballY - checkpoints[i].y;
+            float distance = sqrt(dx * dx + dy * dy);
+            
+            // Check if ball is close enough to checkpoint
+            if (distance < ballRadius + (blockSize / 2) * 0.8f) {
+                checkpoints[i].activated = true;
+                lastCheckpointIndex = i;
+                lastCheckpointX = checkpoints[i].x;
+                lastCheckpointY = checkpoints[i].y;
+                
+                // Update the map to show activated checkpoint
+                int mapX = (int)(checkpoints[i].x / blockSize);
+                int mapY = (int)((MAX_MAP_HEIGHT * blockSize - checkpoints[i].y) / blockSize);
+                if (mapX >= 0 && mapX < MAX_MAP_WIDTH && mapY >= 0 && mapY < MAX_MAP_HEIGHT) {
+                    map[mapY][mapX] = 'Q'; // Use 'Q' to represent activated checkpoint
+                }
+                
+                // Play checkpoint sound if enabled
+                if (soundEnabled) {
+                    iPlaySound("assets/sounds/chime.wav", false);
+                }
+                break;
+            }
+        }
+    }
+}
+//respawn 
+void respawnAtCheckpoint() {
+    ballX = lastCheckpointX;
+    ballY = lastCheckpointY;
+    ballDY = 0;
+    ballDx = 0;
+    vx = 0;
+    vy = 0;
+    ballRotation = 0.0f;
+    onGround = false;
+    
+    // Update camera to follow ball
+    cameraX = ballX - visibleWidth / 2;
+    cameraY = 0;
+    if (cameraX < 0) cameraX = 0;
+    if (cameraX > MAX_MAP_WIDTH * blockSize - visibleWidth) {
+        cameraX = MAX_MAP_WIDTH * blockSize - visibleWidth;
+    }
+}
+
+
 //moving enemies
 void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
     enemyCount = 0;
@@ -362,24 +457,20 @@ void displayLeaderboard() {
 }
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
-    
-    // Draw normal map elements (excluding 'x' since we handle them separately)
     int startX = (int)(cameraX / blockSize) - 1;
     int endX = (int)((cameraX + visibleWidth) / blockSize) + 1;
     int startY = 0;
     int endY = MAX_MAP_HEIGHT;
     
-    // Clamp to map bounds
     if(startX < 0) startX = 0;
     if(endX >= MAX_MAP_WIDTH) endX = MAX_MAP_WIDTH - 1;
     
-    for (y = startY; y < endY; y++) {
-        for (x = startX; x <= endX; x++) {
+    for (int y = startY; y < endY; y++) {
+        for (int x = startX; x <= endX; x++) {
             char currentChar = map[y][x];
             int posX = (x * blockSize) - cameraX;
             int posY = ((MAX_MAP_HEIGHT - y - 1) * blockSize) - cameraY;
 
-            // Skip if completely off screen
             if(posX < -blockSize || posX > visibleWidth || posY < -blockSize || posY > visibleHeight)
                 continue;
 
@@ -387,20 +478,19 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
                 iShowImage(posX, posY, "assets/images/block.bmp");
             } else if (currentChar == 'P') {
                 iShowImage(posX, posY, "assets/images/ring-main.bmp");
+            } else if (currentChar == 'Q') { // Activated checkpoint
+                iShowImage(posX, posY, "assets/images/ring2.bmp");
             } else if (currentChar == 'c') {
                 iShowImage(posX, posY, "assets/images/coin.bmp");
             } else if (currentChar == 'G') {
                 iSetColor(0, 255, 0);
                 iFilledCircle(posX + blockSize / 2, posY + blockSize / 2, blockSize / 2);
-            }
-            else if(currentChar == '|'){
+            } else if(currentChar == '|'){
                 iShowImage(posX, posY, "assets/images/spike-main.bmp");
             }
-            // Note: 'x' is handled separately in drawEnemies()
         }
     }
     
-    // Draw enemies
     drawEnemies();
 }
 //collision with enemy 
@@ -420,7 +510,7 @@ void checkEnemyCollision() {
             if (lives <= 0) {
                 currentState = STATE_GAME_OVER;
             } else {
-                initializeLevel();  // restart this level with same lives
+                respawnAtCheckpoint(); // Respawn 
             }
             return;
         }
@@ -469,47 +559,38 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
     int tileXLeft = (int)((ballX - ballRadius) / blockSize);
     int tileXRight = (int)((ballX + ballRadius) / blockSize);
 
+    bool hitSpike = false;
+
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileX] == '|') {
-            lives--;
-    if (lives <= 0) {
-        currentState = STATE_GAME_OVER;
-    } else {
-        initializeLevel();
-    }  
+            hitSpike = true;
         }
     }
 
     if (tileYAbove >= 0 && tileYAbove < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYAbove][tileX] == '|') {
-            lives--;
-    if (lives <= 0) {
-        currentState = STATE_GAME_OVER;
-    } else {
-        initializeLevel();
-    } 
+            hitSpike = true;
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXLeft >= 0 && tileXLeft < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXLeft] == '|') {
-            lives--;
-    if (lives <= 0) {
-        currentState = STATE_GAME_OVER;
-    } else {
-        initializeLevel();
-    }  
+            hitSpike = true;
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXRight >= 0 && tileXRight < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXRight] == '|') {
-            lives--;
-    if (lives <= 0) {
-        currentState = STATE_GAME_OVER;
-    } else {
-        initializeLevel();
-    }  
+            hitSpike = true;
+        }
+    }
+
+    if (hitSpike) {
+        lives--;
+        if (lives <= 0) {
+            currentState = STATE_GAME_OVER;
+        } else {
+            respawnAtCheckpoint(); // Respawn at last checkpoint instead of level start
         }
     }
 }
@@ -595,7 +676,6 @@ void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
 void updatePhysics() {
     if(currentState != STATE_GAME) return;
     
-    // Get current map
     char (*currentMap)[MAX_MAP_WIDTH] = NULL;
     if (currentLevel == 1) currentMap = level1;
     else if (currentLevel == 2) currentMap = level2;
@@ -607,10 +687,14 @@ void updatePhysics() {
     if(isSpecialKeyPressed(GLUT_KEY_LEFT))
     {
         ballDx = -moveSpeed;
+        ballRotation += 5.0f;
+        if (ballRotation < 0) ballRotation += 360.0f;
     }
     else if(isSpecialKeyPressed(GLUT_KEY_RIGHT))
     {
         ballDx = moveSpeed;
+        ballRotation -= 5.0f;
+        if (ballRotation >= 360.0f) ballRotation -= 360.0f;
     }
     else
     {
@@ -643,11 +727,28 @@ void updatePhysics() {
     checkSpikeCollision(currentMap);
     checkVictory(currentMap);
     collection(currentMap);
+    checkCheckpointCollision(currentMap); // Add checkpoint checking
     updateEnemies(currentMap);
     limitBallPosition();
     updateCameraPosition();
-    checkEnemyCollision();  
-
+    checkEnemyCollision();
+}
+//rotate func
+void drawRotatedBall(int x, int y, const char* imagePath, float angle) {
+    // Save current transformation matrix
+    glPushMatrix();
+    
+    // Translate to ball position
+    glTranslatef(x + ballRadius, y + ballRadius, 0);
+    
+    // Rotate around the center
+    glRotatef(angle, 0, 0, 1);
+    
+    // Draw the image centered at origin
+    iShowImage(-ballRadius, -ballRadius, imagePath);
+    
+    // Restore transformation matrix
+    glPopMatrix();
 }
 
 // Save player name and score to highscore.txt
@@ -747,13 +848,6 @@ if (hoveredButton == 5) {
     } else {
         iShowImage(btnX, btnY + 1 * (btnH + gap), "assets/images/about_us.bmp");
     }
-
-
-
-
-
-
-
 }
     else if (currentState == STATE_LEADERBOARD)
 {
@@ -788,37 +882,6 @@ if (hoveredButton == 5) {
             iText(50, 550, welcomeText, GLUT_BITMAP_HELVETICA_18);
         }
     
-// if(hoveredButton == 0) {
-//             iShowImage(btnX-15, btnY + 3 * (btnH + gap), "assets/images/level1_1.bmp");
-//         }   
-//         else
-//         {
-//             iShowImage(btnX,btnY + 3*(btnH + gap), "assets/images/level1.bmp");
-//         }
-//  if(hoveredButton == 1) {
-//             iShowImage(btnX-15, btnY + 2 * (btnH + gap), "assets/images/level2_1.bmp");
-//         }
-//         else
-//         {
-//             iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/level2.bmp");
-//         }
-
-//  if(hoveredButton == 2) {
-
-//             iShowImage(btnX-15, btnY + (btnH + gap), "assets/images/level3_1.bmp");
-//         }
-//         else
-//         {
-//             iShowImage(btnX, btnY + (btnH + gap), "assets/images/level3.bmp");
-//         }
-
-
-
-
-
-
-
-
 
     }
     
@@ -843,20 +906,21 @@ iText(20, 500, livesText, GLUT_BITMAP_HELVETICA_18);
 
 
 iShowSpeed(940,550);
-        iSetColor(255, 0, 0);
-        iFilledCircle(ballX - cameraX, ballY - cameraY, ballRadius);
+    
+    // Replace the iSetColor and iFilledCircle with the rotated ball image
+    drawRotatedBall(ballX - cameraX - ballRadius, ballY - cameraY - ballRadius, "assets/images/ball.bmp", ballRotation);
 
-        char scoreText[20];
-        sprintf(scoreText, "Score: %d", score);
-        iSetColor(255, 255, 255);
-        iText(20, 560, scoreText, GLUT_BITMAP_HELVETICA_18);
-        
-        // Show player name during game
-        if (nameEntered && strlen(playerName) > 0) {
-            char playerText[60];
-            sprintf(playerText, "Player: %s", playerName);
-            iText(20, 530, playerText, GLUT_BITMAP_HELVETICA_12);
-        }
+    char scoreText[20];
+    sprintf(scoreText, "Score: %d", score);
+    iSetColor(255, 255, 255);
+    iText(20, 560, scoreText, GLUT_BITMAP_HELVETICA_18);
+    
+    // Show player name during game
+    if (nameEntered && strlen(playerName) > 0) {
+        char playerText[60];
+        sprintf(playerText, "Player: %s", playerName);
+        iText(20, 530, playerText, GLUT_BITMAP_HELVETICA_12);
+    }
     }
     else if (currentState == STATE_INSTRUCTIONS)
     {
@@ -917,22 +981,22 @@ iShowSpeed(940,550);
         iText(350, 250, statusText, GLUT_BITMAP_HELVETICA_18);
     }
     else if (currentState == STATE_PAUSE)
-    {
-        if (currentLevel == 1) {
-            iShowImage(0, 0, "assets/images/level1.bmp");
-            drawMap(level1);
-        } else if (currentLevel == 2) {
-            iShowImage(0, 0, "assets/images/level2.bmp");
-            drawMap(level2);
-        } else if (currentLevel == 3) {
-            iShowImage(0, 0, "assets/images/level3.bmp");
-            drawMap(level3);
-        }
-
-        iSetColor(255, 0, 0);
-        iFilledCircle(ballX - cameraX, ballY - cameraY, ballRadius);
-        iShowImage(300, 170, "assets/images/pause.bmp");
+{
+    if (currentLevel == 1) {
+        iShowImage(0, 0, "assets/images/level1.bmp");
+        drawMap(level1);
+    } else if (currentLevel == 2) {
+        iShowImage(0, 0, "assets/images/level2.bmp");
+        drawMap(level2);
+    } else if (currentLevel == 3) {
+        iShowImage(0, 0, "assets/images/level3.bmp");
+        drawMap(level3);
     }
+
+    // Replace the ball drawing here too
+    drawRotatedBall(ballX - cameraX - ballRadius, ballY - cameraY - ballRadius, "assets/images/ball.bmp", ballRotation);
+    iShowImage(300, 170, "assets/images/pause.bmp");
+}
 
 else if(currentState == STATE_ABOUT_US)
 {
@@ -1079,6 +1143,9 @@ void iKeyboard(unsigned char key, int state)
         currentState = STATE_LEVEL_SELECT;
         initializeLevel();
     }
+    if (currentState ==STATE_ABOUT_US && key == 'b') {
+        currentState = STATE_MAIN_MENU;
+    }
     
     if (currentState == STATE_LEVEL_SELECT) 
     {
@@ -1139,12 +1206,6 @@ void iMouseMove(int mx, int my) {
 else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH) {
             hoveredButton = 5;  // about us button
         }
-
-
-
-
-
-
         else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
             hoveredButton = 4;  // Exit button
         }
@@ -1200,11 +1261,8 @@ void iMouse(int button, int state, int mx, int my)
 
 else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH)
             {
-                currentState = STATE_ABOUT_US;  // Navigate to About Us section
+                currentState = STATE_ABOUT_US;  
             }
-
-
-
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2*(btnH + gap) && my <= btnY + 2*(btnH + gap) + btnH)
             {
                currentState = STATE_SETTINGS;
