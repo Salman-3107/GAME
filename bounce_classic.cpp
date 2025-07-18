@@ -1010,10 +1010,13 @@ else if(currentState == STATE_ABOUT_US)
     iText(100,370,"students of Computer Science and Engineering at BUET,", GLUT_BITMAP_TIMES_ROMAN_24);
 iText(100,340,"united by a shared passion for crafting interactive digital experiences.", GLUT_BITMAP_TIMES_ROMAN_24);
 iText(100,310,"Under the thoughtful guidance of Mahir Labib Dihan, Adjunct Lecturer at BUET,", GLUT_BITMAP_TIMES_ROMAN_24);
-iText(100,280," this rendition of Bounce Classic was born—not merely as a programming exercise," , GLUT_BITMAP_TIMES_ROMAN_24);
+iText(100,280," this rendition of Bounce Classic was born not merely as a programming exercise," , GLUT_BITMAP_TIMES_ROMAN_24);
 iText(100,250,"but as a tribute to the timeless joy of retro gaming.With each line of code,", GLUT_BITMAP_TIMES_ROMAN_24);
 iText(100,220," we sought to breathe new life into a beloved classic,", GLUT_BITMAP_TIMES_ROMAN_24);
 iText(100,190,"blending nostalgia with innovation in the spirit of learning and creativity. --", GLUT_BITMAP_TIMES_ROMAN_24);
+
+    iSetColor(0, 23, 66);
+    iText(100, 130, "Press 'b' to return to Main Menu", GLUT_BITMAP_HELVETICA_18);
 
 
 }
