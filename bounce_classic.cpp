@@ -18,6 +18,7 @@ typedef enum
     STATE_PAUSE,
     STATE_GAMEOVER,
     STATE_VICTORY,
+    STATE_ABOUT_US,
     STATE_EXIT,
     STATE_GAME_OVER,
     STATE_LEADERBOARD
@@ -115,10 +116,10 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
 "######################################################################################",
 "#......|...........|.........|....................|........|.........|............||.#",
 "#....................................................................................#",
-"#......c............................P....................c...........................#",
-"#.....#............................###..............................................G#",
-"#....###...........................###............xx.................................#",
-"#|.#####..o...|...xxx.......|......###.....|||.....x...c..................P....xx...c#",
+"#......c............................P....................c.........#####.............#",
+"#.....#............................###.............................#####............G#",
+"#....###...........................###............xx...............#####.............#",
+"#|.#####..o...|...xxx.......|......###.....|||.....x...c...........#####..P....xx...c#",
 "######################################################################################"
 
 };
@@ -712,27 +713,27 @@ void iDraw()
    
     // Draw buttons based on hover state
     if (hoveredButton == 0) {
-        iShowImage(btnX-15, btnY + 4 * (btnH + gap), "assets/images/start1.bmp");
+        iShowImage(btnX-15, btnY +5 * (btnH + gap), "assets/images/start1.bmp");
     } else {
-        iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/start.bmp");
+        iShowImage(btnX, btnY + 5 * (btnH + gap), "assets/images/start.bmp");
     }
     
     if (hoveredButton == 1) {
-        iShowImage(btnX-15, btnY + 3 * (btnH + gap), "assets/images/instructions1.bmp");
+        iShowImage(btnX-15, btnY + 4 * (btnH + gap), "assets/images/instructions1.bmp");
     } else {
-        iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/instructions.bmp");
+        iShowImage(btnX, btnY + 4 * (btnH + gap), "assets/images/instructions.bmp");
     }
     
     if (hoveredButton == 2) {
-        iShowImage(btnX-15, btnY + (btnH + gap), "assets/images/settings1.bmp");
+        iShowImage(btnX-15, btnY + 2*(btnH + gap), "assets/images/settings1.bmp");
     } else {
-        iShowImage(btnX, btnY + (btnH + gap), "assets/images/settings.bmp");
+        iShowImage(btnX, btnY + 2*(btnH + gap), "assets/images/settings.bmp");
     }
     
     if (hoveredButton == 3) {
-        iShowImage(btnX-15, btnY + 2 * (btnH + gap), "assets/images/leaderboad1.bmp");
+        iShowImage(btnX-15, btnY + 3 * (btnH + gap), "assets/images/leaderboad1.bmp");
     } else {
-        iShowImage(btnX, btnY + 2 * (btnH + gap), "assets/images/leaderboad.bmp");
+        iShowImage(btnX, btnY + 3 * (btnH + gap), "assets/images/leaderboad.bmp");
     }
     
     if (hoveredButton == 4) {
@@ -740,6 +741,19 @@ void iDraw()
     } else {
         iShowImage(btnX, btnY, "assets/images/Exit.bmp");
     }
+
+if (hoveredButton == 5) {
+        iShowImage(btnX-15, btnY + 1 * (btnH + gap), "assets/images/about_us1.bmp");
+    } else {
+        iShowImage(btnX, btnY + 1 * (btnH + gap), "assets/images/about_us.bmp");
+    }
+
+
+
+
+
+
+
 }
     else if (currentState == STATE_LEADERBOARD)
 {
@@ -919,6 +933,22 @@ iShowSpeed(940,550);
         iFilledCircle(ballX - cameraX, ballY - cameraY, ballRadius);
         iShowImage(300, 170, "assets/images/pause.bmp");
     }
+
+else if(currentState == STATE_ABOUT_US)
+{
+
+    iShowImage(0, 0, "assets/images/about_us_main.bmp");
+    iSetColor(0, 0, 0);
+    iText(120, 400, "About Us:", GLUT_BITMAP_TIMES_ROMAN_24);
+
+    iText(120, 370, "- We are Salman Faresi and Mahibur Rahman Fahim, students of Computer Science and Engineering at BUET, united by a shared passion for crafting interactive digital experiences." , GLUT_BITMAP_TIMES_ROMAN_24);
+iText(120,340,"Under the thoughtful guidance of Mahir Labib Dihan, Adjunct Lecturer at BUET, this rendition of Bounce Classic was born—not merely as a programming exercise, but as a tribute to the timeless joy of retro gaming ." , GLUT_BITMAP_TIMES_ROMAN_24);
+iText(120,310," With each line of code, we sought to breathe new life into a beloved classic, blending nostalgia with innovation in the spirit of learning and creativity." , GLUT_BITMAP_TIMES_ROMAN_24);
+
+
+}
+
+
     else if (currentState == STATE_GAME_OVER)
     {
         iShowImage(0, 0, "assets/images/game-over.bmp");
@@ -1087,18 +1117,28 @@ void iKeyboard(unsigned char key, int state)
 
 void iMouseMove(int mx, int my) {
     if (currentState == STATE_MAIN_MENU) {
-        if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH) {
+        if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 5 * (btnH + gap) && my <= btnY + 5 * (btnH + gap) + btnH) {
             hoveredButton = 0;  // Start button
         }
-        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH) {
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH) {
             hoveredButton = 1;  // Instructions button
         }
-        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH) {
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2*(btnH + gap) && my <= btnY + 2*(btnH + gap) + btnH) {
             hoveredButton = 2;  // Settings button
         }
-        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH) {
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH) {
             hoveredButton = 3;  // Leaderboard button
         }
+
+else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH) {
+            hoveredButton = 5;  // about us button
+        }
+
+
+
+
+
+
         else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
             hoveredButton = 4;  // Exit button
         }
@@ -1138,7 +1178,7 @@ void iMouse(int button, int state, int mx, int my)
         if (currentState == STATE_MAIN_MENU)
         {
             // Your existing main menu click handling...
-            if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
+            if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 5 * (btnH + gap) && my <= btnY + 5 * (btnH + gap) + btnH)
             {
                 if (!nameEntered || strlen(playerName) == 0) {
                     currentState = STATE_PLAYER_NAME_INPUT;
@@ -1147,15 +1187,23 @@ void iMouse(int button, int state, int mx, int my)
                     currentState = STATE_LEVEL_SELECT;
                 }
             }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH)
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 4 * (btnH + gap) && my <= btnY + 4 * (btnH + gap) + btnH)
             {
                 currentState = STATE_INSTRUCTIONS;
             }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + (btnH + gap) && my <= btnY + (btnH + gap) + btnH)
+
+else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH)
+            {
+                currentState = STATE_ABOUT_US;  // Navigate to About Us section
+            }
+
+
+
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2*(btnH + gap) && my <= btnY + 2*(btnH + gap) + btnH)
             {
                currentState = STATE_SETTINGS;
             }
-            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 2 * (btnH + gap) && my <= btnY + 2 * (btnH + gap) + btnH)
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 3 * (btnH + gap) && my <= btnY + 3 * (btnH + gap) + btnH)
             {
                 currentState = STATE_LEADERBOARD; 
             }
