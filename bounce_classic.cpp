@@ -24,7 +24,7 @@ typedef enum
 } GameState;
 
 GameState currentState = STATE_MAIN_MENU;
-
+int lives=3;
 int bgmChannel = -1;  // Track the background music channel
 int soundEffectChannel = -1;  // Track sound effect channels
 
@@ -168,6 +168,9 @@ void initializeLevel() {
     ballDx = 0;
     vx = 0;
     vy = 0;
+    score=0;
+    
+
     onGround = false;
     cameraX = 0;
     cameraY = 0;
@@ -403,24 +406,26 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
 void checkEnemyCollision() {
     for (int i = 0; i < enemyCount; i++) {
         if (!enemies[i].active) continue;
-        
-        // Calculate enemy world position
+
         float enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
         float enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
-        
-        // Calculate distance between ball and enemy
+
         float dx = ballX - enemyWorldX;
         float dy = ballY - enemyWorldY;
         float distance = sqrt(dx * dx + dy * dy);
-        
-        // Check if collision occurred (ball radius + enemy radius)
+
         if (distance < ballRadius + (blockSize / 2) * 0.8f) {
-            // Game over - go back to main menu
-          gameOver(); 
+            lives--;
+            if (lives <= 0) {
+                currentState = STATE_GAME_OVER;
+            } else {
+                initializeLevel();  // restart this level with same lives
+            }
             return;
         }
     }
 }
+
 
 // Update camera position to ensure it stays within map bounds
 void updateCameraPosition()
@@ -465,25 +470,45 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]) {
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileX] == '|') {
-            gameOver();  
+            lives--;
+    if (lives <= 0) {
+        currentState = STATE_GAME_OVER;
+    } else {
+        initializeLevel();
+    }  
         }
     }
 
     if (tileYAbove >= 0 && tileYAbove < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH) {
         if (map[tileYAbove][tileX] == '|') {
-            gameOver();  
+            lives--;
+    if (lives <= 0) {
+        currentState = STATE_GAME_OVER;
+    } else {
+        initializeLevel();
+    } 
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXLeft >= 0 && tileXLeft < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXLeft] == '|') {
-            gameOver();  
+            lives--;
+    if (lives <= 0) {
+        currentState = STATE_GAME_OVER;
+    } else {
+        initializeLevel();
+    }  
         }
     }
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXRight >= 0 && tileXRight < MAX_MAP_WIDTH) {
         if (map[tileYBelow][tileXRight] == '|') {
-            gameOver();  
+            lives--;
+    if (lives <= 0) {
+        currentState = STATE_GAME_OVER;
+    } else {
+        initializeLevel();
+    }  
         }
     }
 }
@@ -795,6 +820,14 @@ void iDraw()
             iShowImage(0, 0, "assets/images/level3.bmp");
             drawMap(level3);
         }
+
+char livesText[20];
+sprintf(livesText, "Lives: %d", lives);
+iText(20, 500, livesText, GLUT_BITMAP_HELVETICA_18);
+
+
+
+
 iShowSpeed(940,550);
         iSetColor(255, 0, 0);
         iFilledCircle(ballX - cameraX, ballY - cameraY, ballRadius);
@@ -977,8 +1010,9 @@ void iKeyboard(unsigned char key, int state)
     if (currentState == STATE_GAME_OVER && key == 'b')  
     {
         currentState = STATE_MAIN_MENU;  
+        
         initializeLevel(); 
-        score = 0;
+        
     }
     
     if (key == 'p' && currentState == STATE_GAME) 
@@ -1000,6 +1034,7 @@ void iKeyboard(unsigned char key, int state)
         else if (key == 'b')  
         {
             currentState = STATE_MAIN_MENU;
+            
             initializeLevel();
         }
     }
@@ -1044,6 +1079,7 @@ void iKeyboard(unsigned char key, int state)
             currentState = STATE_GAME;
         } else {
             currentState = STATE_MAIN_MENU;
+            
             initializeLevel();
         }
     }
@@ -1069,6 +1105,9 @@ void iMouseMove(int mx, int my) {
         else {
             hoveredButton = -1;  // No button hovered
         }
+
+        score=0;
+        lives=3;
     }
 
     else if(currentState == STATE_LEVEL_SELECT)
