@@ -929,11 +929,11 @@ iShowSpeed(940,550);
         // iFilledRectangle(120, 260, 700, 200);
 
         iSetColor(0, 0, 0);
-        iText(120, 400, "Instructions:", GLUT_BITMAP_TIMES_ROMAN_24);
-        iText(120, 370, "- Use LEFT and RIGHT arrow keys to move the ball & SPACEBAR for jumping.", GLUT_BITMAP_HELVETICA_18);
-        iText(120, 340, "- Beware of the spikes and butterflies.", GLUT_BITMAP_HELVETICA_18);
-        iText(120, 310, "- The coins worth 10 points each,you have 3 lives to complete each level.", GLUT_BITMAP_HELVETICA_18);
-        iText(120, 280, "- Press 'b' to return to the Main Menu.", GLUT_BITMAP_HELVETICA_18);
+        iText(200, 280, "Instructions:", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText(200, 250, "- Use LEFT and RIGHT arrow keys to move the ball & SPACEBAR for jumping.", GLUT_BITMAP_HELVETICA_18);
+        iText(200, 220, "- Beware of the spikes and butterflies.", GLUT_BITMAP_HELVETICA_18);
+        iText(200, 190, "- The coins worth 10 points each,you have 3 lives to complete each level.", GLUT_BITMAP_HELVETICA_18);
+        iText(200,160, "- Press 'b' to return to the Main Menu.", GLUT_BITMAP_HELVETICA_18);
     }
    else if (currentState == STATE_SETTINGS)
     {
