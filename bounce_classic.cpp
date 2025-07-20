@@ -515,15 +515,15 @@ void displayLeaderboard()
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
-    int startX = (int)(cameraX / blockSize) - 1;
-    int endX = (int)((cameraX + visibleWidth) / blockSize) + 1;
+    int startX = (int)(cameraX / blockSize)- 1;
+    int endX = (int)((cameraX + visibleWidth) / blockSize)+1 ;
     int startY = 0;
     int endY = MAX_MAP_HEIGHT;
 
     if (startX < 0)
         startX = 0;
     if (endX >= MAX_MAP_WIDTH)
-        endX = MAX_MAP_WIDTH - 1;
+        endX = MAX_MAP_WIDTH -1;
 
     for (int y = startY; y < endY; y++)
     {
@@ -558,7 +558,7 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
             }
             else if (currentChar == '|')
             {
-                iShowImage(posX, posY, "assets/images/spike-main.bmp");
+                iShowImage(posX+25, posY, "assets/images/spike-main.bmp");
             }
         }
     }
