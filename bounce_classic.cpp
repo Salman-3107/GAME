@@ -186,6 +186,7 @@ void toggleSound(bool enable)
 // Initialize game for new level
 void initializeLevel()
 {
+    lives = 3; 
     ballX = 200;
     ballY = 300;
     ballDY = 0;
@@ -498,7 +499,7 @@ void displayLeaderboard()
         else if (i == 2)
             iSetColor(205, 127, 50); // Bronze
         else
-            iSetColor(255, 255, 255); // White
+            iSetColor(0, 0,0); 
 
         int yPos = 480 - (i * 30);
         iText(210, yPos, rankText, GLUT_BITMAP_HELVETICA_18);
@@ -1350,26 +1351,26 @@ void iKeyboard(unsigned char key, int state)
     }
 
     if (currentState == STATE_VICTORY && key == 'n')
+{
+    // Save score when level is completed
+    if (nameEntered && strlen(playerName) > 0)
     {
-        // Save score when level is completed
-        if (nameEntered && strlen(playerName) > 0)
-        {
-            savePlayerScore(playerName, score, currentLevel);
-        }
-
-        if (currentLevel < 3)
-        {
-            currentLevel++;
-            initializeLevel();
-            currentState = STATE_GAME;
-        }
-        else
-        {
-            currentState = STATE_MAIN_MENU;
-
-            initializeLevel();
-        }
+        savePlayerScore(playerName, score, currentLevel);
     }
+
+    if (currentLevel < 3)
+    {
+        currentLevel++;
+        lives = 3; 
+        initializeLevel();
+        currentState = STATE_GAME;
+    }
+    else
+    {
+        currentState = STATE_MAIN_MENU;
+        initializeLevel();
+    }
+}
 }
 
 void iMouseMove(int mx, int my)
@@ -1539,7 +1540,7 @@ void iMouse(int button, int state, int mx, int my)
 void iMovement(int value)
 {
     updatePhysics();
-    glutTimerFunc(16, iMovement, 0);
+    glutTimerFunc(8, iMovement, 0);
 }
 
 void iSpecialKeyboard(unsigned char key, int state) {}
@@ -1562,7 +1563,7 @@ int main(int argc, char *argv[])
 
     glutInit(&argc, argv);
     iInitializeSound();
-    glutTimerFunc(16, iMovement, 0);
+    glutTimerFunc(8, iMovement, 0);
     iOpenWindow(1000, 600, "Bounce Classic");
     atexit(iFreeSound);
 
