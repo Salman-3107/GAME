@@ -1287,6 +1287,12 @@ void iKeyboard(unsigned char key, int state)
         onGround = false;
     }
 
+    if(currentState == STATE_VICTORY)
+    {
+lives=3;
+
+    }
+
     if (currentState == STATE_GAME_OVER && key == 'b')
     {
         currentState = STATE_MAIN_MENU;
