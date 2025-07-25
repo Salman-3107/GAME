@@ -23,15 +23,14 @@ typedef enum
     STATE_EXIT,
     STATE_GAME_OVER,
     STATE_LEADERBOARD
-    
-    
+
 } GameState;
 // ball rotation
 float ballRotation = 0.0f;
 GameState currentState = STATE_MAIN_MENU;
 int lives = 3;
-int bgmChannel = -1;         
-int soundEffectChannel = -1; 
+int bgmChannel = -1;
+int soundEffectChannel = -1;
 // checkpoint
 typedef struct
 {
@@ -41,14 +40,14 @@ typedef struct
 #define MAX_CHECKPOINTS 10
 Checkpoint checkpoints[MAX_CHECKPOINTS];
 int checkpointCount = 0;
-int lastCheckpointIndex = -1;                       
-float lastCheckpointX = 200, lastCheckpointY = 300; 
+int lastCheckpointIndex = -1;
+float lastCheckpointX = 200, lastCheckpointY = 300;
 
 bool bgmInitialized = false;
 bool bgmplaying = false;
 bool soundEnabled = true;
 bool gameRunning = true;
-bool canResume = false; 
+bool canResume = false;
 
 // hover buttion
 int hoveredButton = -1;
@@ -69,10 +68,7 @@ float vx = 0, vy = 0;
 float moveSpeed = 7;
 float jumpSpeed = 22;
 int savedLevel = 0;
-float savedBallX, savedBallY; 
-
-
-
+float savedBallX, savedBallY;
 
 int score = 0;
 int currentLevel = 1;
@@ -102,13 +98,13 @@ int compareScores(const void *a, const void *b)
 {
     HighScore *scoreA = (HighScore *)a;
     HighScore *scoreB = (HighScore *)b;
-    return scoreB->score - scoreA->score; 
+    return scoreB->score - scoreA->score;
 }
 // Player name system
 char playerName[50] = "";
 int nameLength = 0;
-bool nameEntered = false;    
-bool isEnteringName = false; 
+bool nameEntered = false;
+bool isEnteringName = false;
 void gameOver();
 
 // Map
@@ -145,7 +141,6 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
 
 };
 
-
 void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
 void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
 // map backup
@@ -180,7 +175,7 @@ void toggleSound(bool enable)
     soundEnabled = enable;
     if (!enable)
     {
-        
+
         iStopAllSounds();
         bgmChannel = -1;
         bgmplaying = false;
@@ -188,14 +183,14 @@ void toggleSound(bool enable)
     }
     else
     {
-       
+
         bgmInitialized = false;
     }
 }
 // Initialize game for new level
 void initializeLevel()
 {
-    lives = 3; 
+    lives = 3;
     ballX = 200;
     ballY = 300;
     ballDY = 0;
@@ -264,7 +259,6 @@ void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
             float dy = ballY - checkpoints[i].y;
             float distance = sqrt(dx * dx + dy * dy);
 
-            
             if (distance < ballRadius + (blockSize / 2) * 0.8f)
             {
                 checkpoints[i].activated = true;
@@ -272,15 +266,13 @@ void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
                 lastCheckpointX = checkpoints[i].x;
                 lastCheckpointY = checkpoints[i].y;
 
-                
                 int mapX = (int)(checkpoints[i].x / blockSize);
                 int mapY = (int)((MAX_MAP_HEIGHT * blockSize - checkpoints[i].y) / blockSize);
                 if (mapX >= 0 && mapX < MAX_MAP_WIDTH && mapY >= 0 && mapY < MAX_MAP_HEIGHT)
                 {
-                    map[mapY][mapX] = 'Q'; 
+                    map[mapY][mapX] = 'Q';
                 }
 
-                
                 if (soundEnabled)
                 {
                     iPlaySound("assets/sounds/chime.wav", false);
@@ -329,15 +321,15 @@ void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
                     enemies[enemyCount].x = x;
                     enemies[enemyCount].y = y;
                     enemies[enemyCount].offset = 0;
-                    
+
                     enemies[enemyCount].speed = 1.0f + (rand() % 3) * 0.3f;
                     enemies[enemyCount].direction = (rand() % 2) ? 1 : -1;
                     enemies[enemyCount].active = true;
-                    
+
                     enemies[enemyCount].timer = rand() % 100;
                     enemyCount++;
                 }
-                
+
                 map[y][x] = '.';
             }
         }
@@ -351,13 +343,10 @@ void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         if (!enemies[i].active)
             continue;
 
-        
         enemies[i].timer += 1.0f;
 
-        
         enemies[i].offset += enemies[i].direction * enemies[i].speed * 0.02f;
 
-        
         if (enemies[i].offset > 1.5f)
         {
             enemies[i].offset = 1.5f;
@@ -369,7 +358,6 @@ void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
             enemies[i].direction = 1;
         }
 
-        
         int checkX = enemies[i].x + (int)enemies[i].offset;
         if (checkX >= 0 && checkX < MAX_MAP_WIDTH &&
             enemies[i].y >= 0 && enemies[i].y < MAX_MAP_HEIGHT)
@@ -426,20 +414,18 @@ void displayLeaderboard()
         return;
     }
 
-    HighScore scores[1000]; 
+    HighScore scores[1000];
     int count = 0;
     char line[150];
 
-    
     while (fgets(line, sizeof(line), file) && count < 1000)
     {
         char tempName[50];
         int tempLevel, tempScore;
 
-        
         if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3)
         {
-            
+
             int existingIndex = -1;
             for (int i = 0; i < count; i++)
             {
@@ -452,7 +438,7 @@ void displayLeaderboard()
 
             if (existingIndex != -1)
             {
-                
+
                 if (tempScore > scores[existingIndex].score)
                 {
                     scores[existingIndex].level = tempLevel;
@@ -461,7 +447,7 @@ void displayLeaderboard()
             }
             else
             {
-                
+
                 strcpy(scores[count].name, tempName);
                 scores[count].level = tempLevel;
                 scores[count].score = tempScore;
@@ -471,10 +457,8 @@ void displayLeaderboard()
     }
     fclose(file);
 
-    
     qsort(scores, count, sizeof(HighScore), compareScores);
 
-    
     iSetColor(255, 255, 0);
     iText(400, 550, "TOP 10 HIGH SCORES", GLUT_BITMAP_TIMES_ROMAN_24);
     iSetColor(255, 255, 255);
@@ -483,11 +467,9 @@ void displayLeaderboard()
     iText(450, 520, "Level", GLUT_BITMAP_HELVETICA_18);
     iText(550, 520, "Score", GLUT_BITMAP_HELVETICA_18);
 
-   
     iSetColor(255, 255, 255);
     iLine(180, 510, 620, 510);
 
-    
     int displayCount = (count < 10) ? count : 10;
     for (int i = 0; i < displayCount; i++)
     {
@@ -499,15 +481,14 @@ void displayLeaderboard()
         sprintf(levelText, "%d", scores[i].level);
         sprintf(scoreText, "%d", scores[i].score);
 
-       
         if (i == 0)
-            iSetColor(255, 215, 0); 
+            iSetColor(255, 215, 0);
         else if (i == 1)
-            iSetColor(192, 192, 192); 
+            iSetColor(192, 192, 192);
         else if (i == 2)
-            iSetColor(205, 127, 50); 
+            iSetColor(205, 127, 50);
         else
-            iSetColor(0, 0,0); 
+            iSetColor(0, 0, 0);
 
         int yPos = 480 - (i * 30);
         iText(210, yPos, rankText, GLUT_BITMAP_HELVETICA_18);
@@ -516,22 +497,21 @@ void displayLeaderboard()
         iText(550, yPos, scoreText, GLUT_BITMAP_HELVETICA_18);
     }
 
-    
     iSetColor(0, 23, 66);
     iText(350, 40, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
 }
 
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
-    int startX = (int)(cameraX / blockSize)- 1;
-    int endX = (int)((cameraX + visibleWidth) / blockSize)+1 ;
+    int startX = (int)(cameraX / blockSize) - 1;
+    int endX = (int)((cameraX + visibleWidth) / blockSize) + 1;
     int startY = 0;
     int endY = MAX_MAP_HEIGHT;
 
     if (startX < 0)
         startX = 0;
     if (endX >= MAX_MAP_WIDTH)
-        endX = MAX_MAP_WIDTH -1;
+        endX = MAX_MAP_WIDTH - 1;
 
     for (int y = startY; y < endY; y++)
     {
@@ -566,7 +546,7 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
             }
             else if (currentChar == '|')
             {
-                iShowImage(posX+25, posY, "assets/images/spike-main.bmp");
+                iShowImage(posX + 25, posY, "assets/images/spike-main.bmp");
             }
         }
     }
@@ -597,13 +577,12 @@ void checkEnemyCollision()
             }
             else
             {
-                respawnAtCheckpoint(); 
+                respawnAtCheckpoint();
             }
             return;
         }
     }
 }
-
 
 void updateCameraPosition()
 {
@@ -611,7 +590,6 @@ void updateCameraPosition()
     float leftBound = centerX - 200;
     float rightBound = centerX + 200;
 
-    
     int rightmostBlock = 0;
     for (int y = 0; y < MAX_MAP_HEIGHT; y++)
     {
@@ -627,16 +605,13 @@ void updateCameraPosition()
         }
     }
 
-    
     float maxCameraX = (rightmostBlock + 1) * blockSize - visibleWidth;
 
-    
     if (maxCameraX < 0)
     {
         maxCameraX = 0;
     }
 
-    
     float newCameraX = cameraX;
 
     if (ballX - cameraX < leftBound)
@@ -644,17 +619,13 @@ void updateCameraPosition()
     else if (ballX - cameraX > rightBound)
         newCameraX = ballX - rightBound;
 
-    
     newCameraX = fmax(0, fmin(newCameraX, maxCameraX));
 
-    
     float newCameraY = fmax(0, fmin(cameraY, MAX_MAP_HEIGHT * blockSize - visibleHeight));
 
-    
     cameraX = newCameraX;
     cameraY = newCameraY;
 }
-
 
 void limitBallPosition()
 {
@@ -725,7 +696,7 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         }
         else
         {
-            respawnAtCheckpoint(); 
+            respawnAtCheckpoint();
         }
     }
 }
@@ -775,7 +746,7 @@ void collision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         }
     }
 
-    // Horizontal Collision Detection 
+    // Horizontal Collision Detection
     int tileYCenter = (int)((MAX_MAP_HEIGHT * blockSize - ballY) / blockSize);
     int tileXLeft = (int)((ballX - ballRadius) / blockSize);
     int tileXRight = (int)((ballX + ballRadius) / blockSize);
@@ -808,7 +779,7 @@ void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         {
             score += 10;
             if (soundEnabled)
-            { 
+            {
                 iPlaySound("assets/sounds/chime.wav", false);
             }
             map[tileY][tileX] = '.';
@@ -878,7 +849,7 @@ void updatePhysics()
     checkSpikeCollision(currentMap);
     checkVictory(currentMap);
     collection(currentMap);
-    checkCheckpointCollision(currentMap); 
+    checkCheckpointCollision(currentMap);
     updateEnemies(currentMap);
     limitBallPosition();
     updateCameraPosition();
@@ -887,19 +858,15 @@ void updatePhysics()
 // rotate func
 void drawRotatedBall(int x, int y, const char *imagePath, float angle)
 {
-    
+
     glPushMatrix();
 
-    
     glTranslatef(x + ballRadius, y + ballRadius, 0);
 
-    
     glRotatef(angle, 0, 0, 1);
 
-    
     iShowImage(-ballRadius, -ballRadius, imagePath);
 
-    
     glPopMatrix();
 }
 
@@ -938,7 +905,6 @@ void displayHighScore()
             char tempName[50];
             int tempLevel, tempScore;
 
-            
             if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3)
             {
                 if (tempScore > highScore)
@@ -966,23 +932,17 @@ void iDraw()
 
     if (soundEnabled && !bgmInitialized)
     {
-        bgmChannel = iPlaySound("assets/sounds/game_audio.wav", true, 60); 
+        bgmChannel = iPlaySound("assets/sounds/game_audio.wav", true, 60);
         if (bgmChannel != -1)
         {
             bgmplaying = true;
             bgmInitialized = true;
         }
     }
-   if (currentState == STATE_MAIN_MENU)
+    if (currentState == STATE_MAIN_MENU)
     {
         iShowImage(0, 0, "assets/images/wallpaper.bmp");
 
-
-
-
-        
-
-        
         if (hoveredButton == 0)
         {
             iShowImage(btnX - 15, btnY + 5 * (btnH + gap), "assets/images/start1.bmp");
@@ -1036,23 +996,17 @@ void iDraw()
         {
             iShowImage(btnX, btnY + 1 * (btnH + gap), "assets/images/about_us.bmp");
         }
-if(canResume)
-{
-        if(hoveredButton == 6)
+        if (canResume)
         {
-            iShowImage(btnX - 15, btnY + 6 * (btnH + gap), "assets/images/resume1.bmp");
+            if (hoveredButton == 6)
+            {
+                iShowImage(btnX - 15, btnY + 6 * (btnH + gap), "assets/images/resume1.bmp");
+            }
+            else
+            {
+                iShowImage(btnX, btnY + 6 * (btnH + gap), "assets/images/resume.bmp");
+            }
         }
-        else
-        {
-            iShowImage(btnX, btnY + 6 * (btnH + gap), "assets/images/resume.bmp");  
-        }
-    }
-
-
-
-
-
-
     }
     else if (currentState == STATE_LEADERBOARD)
     {
@@ -1069,7 +1023,7 @@ if(canResume)
         strcpy(displayName, playerName);
         if (isEnteringName)
         {
-            strcat(displayName, "_"); 
+            strcat(displayName, "_");
         }
         iText(310, 290, displayName, GLUT_BITMAP_HELVETICA_18);
     }
@@ -1113,7 +1067,6 @@ if(canResume)
 
         iShowSpeed(940, 550);
 
-        
         drawRotatedBall(ballX - cameraX - ballRadius, ballY - cameraY - ballRadius, "assets/images/ball.bmp", ballRotation);
 
         char scoreText[20];
@@ -1143,42 +1096,40 @@ if(canResume)
         iSetColor(0, 26, 66);
         iText(400, 450, "Sound Settings", GLUT_BITMAP_TIMES_ROMAN_24);
 
-        
         if (soundEnabled)
         {
-            iSetColor(0, 200, 0); 
+            iSetColor(0, 200, 0);
             iFilledRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);
-            iSetColor(255, 255, 255);                                   
-            iRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH); 
+            iSetColor(255, 255, 255);
+            iRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);
         }
         else
         {
-            iSetColor(60, 60, 60); 
+            iSetColor(60, 60, 60);
             iFilledRectangle(soundOnBtnX, soundOnBtnY, soundBtnW, soundBtnH);
-            iSetColor(150, 150, 150); 
+            iSetColor(150, 150, 150);
         }
         iText(soundOnBtnX + 45, soundOnBtnY + 20, "SOUND ON", GLUT_BITMAP_HELVETICA_18);
 
-        
         if (!soundEnabled)
         {
-            iSetColor(200, 0, 0); 
+            iSetColor(200, 0, 0);
             iFilledRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);
-            iSetColor(255, 255, 255);                                    
-            iRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH); 
+            iSetColor(255, 255, 255);
+            iRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);
         }
         else
         {
-            iSetColor(60, 60, 60); 
+            iSetColor(60, 60, 60);
             iFilledRectangle(soundOffBtnX, soundOffBtnY, soundBtnW, soundBtnH);
-            iSetColor(150, 150, 150); 
+            iSetColor(150, 150, 150);
         }
         iText(soundOffBtnX + 40, soundOffBtnY + 20, "SOUND OFF", GLUT_BITMAP_HELVETICA_18);
 
         // Instructions
         iSetColor(0, 26, 66);
         iText(350, 200, "Click to toggle sound on/off", GLUT_BITMAP_HELVETICA_18);
-        iText(350, 50, "Press 'b' to return to Main Menu", GLUT_BITMAP_HELVETICA_18);
+        iText(370, 50, "Press 'b' to return ", GLUT_BITMAP_HELVETICA_18);
 
         // Show current status
         iSetColor(255, 255, 0);
@@ -1204,20 +1155,32 @@ if(canResume)
             drawMap(level3);
         }
 
-        // Replace the ball drawing here too
+        // Draw the ball
         drawRotatedBall(ballX - cameraX - ballRadius, ballY - cameraY - ballRadius, "assets/images/ball.bmp", ballRotation);
         iShowImage(100, 105, "assets/images/pause.bmp");
-      
-       if(hoveredButton == 0)
-         {
-              iShowImage(250, 200, "assets/images/resume1.bmp");
-            }
+
+        // Resume button
+        if (hoveredButton == 0)
+        {
+            iShowImage(200, 200, "assets/images/resume1.bmp");
+        }
         else
         {
-            iShowImage(250, 200, "assets/images/resume.bmp");
+            iShowImage(200, 200, "assets/images/resume.bmp");
         }
-        
-         if(hoveredButton == 1)
+
+        // Settings button (new)
+        if (hoveredButton == 1)
+        {
+            iShowImage(400, 200, "assets/images/settings1.bmp");
+        }
+        else
+        {
+            iShowImage(400, 200, "assets/images/settings.bmp");
+        }
+
+        // Menu button
+        if (hoveredButton == 2)
         {
             iShowImage(600, 200, "assets/images/menu1.bmp");
         }
@@ -1234,7 +1197,6 @@ if(canResume)
         iSetColor(0, 23, 66);
         iText(100, 30, "Press 'b' to return to Main Menu", GLUT_BITMAP_HELVETICA_18);
     }
-
 
     else if (currentState == STATE_GAME_OVER)
     {
@@ -1299,11 +1261,9 @@ void iKeyboard(unsigned char key, int state)
         }
         return;
     }
-    if ((key == 'b' || key == 'B') && currentState == STATE_LEADERBOARD )
+    if ((key == 'b' || key == 'B') && currentState == STATE_LEADERBOARD)
     {
         currentState = STATE_MAIN_MENU;
-
-
     }
     if ((key == 'b' || key == 'B') && currentState == STATE_LEVEL_SELECT)
     {
@@ -1311,22 +1271,25 @@ void iKeyboard(unsigned char key, int state)
         initializeLevel();
     }
 
-    
-
-
-
-
-
-    if ((key == 'b'|| key == 'B' )&& currentState == STATE_INSTRUCTIONS )
+    if ((key == 'b' || key == 'B') && currentState == STATE_SETTINGS)
     {
-        currentState = STATE_MAIN_MENU;
-        
-       
+        if (canResume)
+        {
+            currentState = STATE_PAUSE;
+        }
+        else
+        {
+            currentState = STATE_MAIN_MENU;
+        }
     }
-    if ((key == 'b'|| key == 'B' )&& currentState == STATE_SETTINGS )
+
+    if ((key == 'b' || key == 'B') && currentState == STATE_INSTRUCTIONS)
     {
         currentState = STATE_MAIN_MENU;
-        
+    }
+    if ((key == 'b' || key == 'B') && currentState == STATE_SETTINGS)
+    {
+        currentState = STATE_MAIN_MENU;
     }
     if (key == ' ' && onGround && currentState == STATE_GAME)
     {
@@ -1339,10 +1302,10 @@ void iKeyboard(unsigned char key, int state)
         onGround = false;
     }
 
-    if(currentState == STATE_VICTORY)
+    if (currentState == STATE_VICTORY)
     {
-        lives=3;
-    
+        lives = 3;
+
         if (nameEntered && strlen(playerName) > 0)
         {
             savePlayerScore(playerName, score, currentLevel);
@@ -1352,20 +1315,20 @@ void iKeyboard(unsigned char key, int state)
             currentLevel++;
             initializeLevel();
             currentState = STATE_GAME;
-            canResume = false; 
+            canResume = false;
         }
         else
         {
             currentState = STATE_MAIN_MENU;
             initializeLevel();
-            canResume = false; 
+            canResume = false;
         }
     }
 
     if (currentState == STATE_GAME_OVER && (key == 'b' || key == 'B'))
     {
         currentState = STATE_MAIN_MENU;
-        canResume = false; 
+        canResume = false;
         initializeLevel();
     }
 
@@ -1375,16 +1338,12 @@ void iKeyboard(unsigned char key, int state)
         savedBallX = ballX;
         savedBallY = ballY;
         savedLevel = currentLevel;
-        canResume = true; 
+        canResume = true;
         currentState = STATE_PAUSE;
     }
 
-    
-
-     
-
     if (currentState == STATE_VICTORY && (key == 'b' || key == 'B'))
-    { 
+    {
         currentState = STATE_LEVEL_SELECT;
         initializeLevel();
     }
@@ -1416,38 +1375,34 @@ void iKeyboard(unsigned char key, int state)
     }
 
     if (currentState == STATE_VICTORY && (key == 'n' || key == 'N'))
-{
-    // Save score when level is completed
-    if (nameEntered && strlen(playerName) > 0)
     {
-        savePlayerScore(playerName, score, currentLevel);
-    }
+        // Save score when level is completed
+        if (nameEntered && strlen(playerName) > 0)
+        {
+            savePlayerScore(playerName, score, currentLevel);
+        }
 
-    if (currentLevel < 3)
-    {
-        currentLevel++;
-        lives = 3; 
-        initializeLevel();
-        currentState = STATE_GAME;
-        canResume = false; 
+        if (currentLevel < 3)
+        {
+            currentLevel++;
+            lives = 3;
+            initializeLevel();
+            currentState = STATE_GAME;
+            canResume = false;
+        }
+        else
+        {
+            currentState = STATE_MAIN_MENU;
+            initializeLevel();
+            canResume = false;
+        }
     }
-    else
-    {
-        currentState = STATE_MAIN_MENU;
-        initializeLevel();
-        canResume = false; 
-    }
-}
 }
 
 void iMouseMove(int mx, int my)
 {
     if (currentState == STATE_MAIN_MENU)
     {
-
-
-
-
 
         if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 5 * (btnH + gap) && my <= btnY + 5 * (btnH + gap) + btnH)
         {
@@ -1475,17 +1430,17 @@ void iMouseMove(int mx, int my)
             hoveredButton = 4; // Exit button
         }
 
-else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
+        else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
         {
-            if(canResume)
+            if (canResume)
             {
-            hoveredButton = 6; // Resume button
-        }}
-
+                hoveredButton = 6; // Resume button
+            }
+        }
 
         else
         {
-            hoveredButton = -1; 
+            hoveredButton = -1;
         }
 
         score = 0;
@@ -1508,35 +1463,24 @@ else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my 
         }
     }
 
-else if( currentState == STATE_PAUSE)
-{
-
-    if (mx >= 250 && mx <= 250 + btnW && my >= 200 && my <= 200 + btnH)
+    else if (currentState == STATE_PAUSE)
     {
-        hoveredButton = 0; //resume button
-    }
-    else if (mx >= 600 && mx <= 600 + btnW && my >= 200 && my <= 200 + btnH)
-    {
-        hoveredButton = 1; //menu button
-    }
-   
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-    else
-    {
-        hoveredButton = -1;
+        if (mx >= 200 && mx <= 200 + btnW && my >= 200 && my <= 200 + btnH)
+        {
+            hoveredButton = 0; // Resume button
+        }
+        else if (mx >= 400 && mx <= 400 + btnW && my >= 200 && my <= 200 + btnH)
+        {
+            hoveredButton = 1; // Settings button
+        }
+        else if (mx >= 600 && mx <= 600 + btnW && my >= 200 && my <= 200 + btnH)
+        {
+            hoveredButton = 2; // Menu button
+        }
+        else
+        {
+            hoveredButton = -1;
+        }
     }
 }
 void iMouseDrag(int mx, int my) {}
@@ -1578,30 +1522,28 @@ void iMouse(int button, int state, int mx, int my)
                 currentState = STATE_LEADERBOARD;
             }
 
-else if(mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
-{
-    if (canResume)
-    {
-        currentState = STATE_GAME;
-        ballX = savedBallX;
-        ballY = savedBallY;
-        currentLevel = savedLevel;
-        
-    }
-}
-
+            else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
+            {
+                if (canResume)
+                {
+                    currentState = STATE_GAME;
+                    ballX = savedBallX;
+                    ballY = savedBallY;
+                    currentLevel = savedLevel;
+                }
+            }
 
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
             {
                 initializePlayerName();
-                
+
                 iFreeSound();
                 exit(0);
             }
         }
         else if (currentState == STATE_PLAYER_NAME_INPUT)
         {
-            
+
             if (mx >= 310 && mx <= 600 && my >= 290 && my <= 320)
             {
                 isEnteringName = true;
@@ -1619,70 +1561,66 @@ else if(mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <
                 currentLevel = 1;
                 initializeLevel();
                 currentState = STATE_GAME;
-                canResume = false; 
+                canResume = false;
             }
             else if (mx >= 350 && mx <= 620 && my >= 50 && my <= 300)
             {
                 currentLevel = 2;
                 initializeLevel();
                 currentState = STATE_GAME;
-                canResume = false; 
+                canResume = false;
             }
             else if (mx >= 650 && mx <= 920 && my >= 50 && my <= 300)
             {
                 currentLevel = 3;
                 initializeLevel();
                 currentState = STATE_GAME;
-                canResume = false; 
+                canResume = false;
             }
         }
 
-     else if(currentState==STATE_PAUSE)
+        else if (currentState == STATE_PAUSE)
         {
-           
-            if (mx >= 250 && mx <= 250 + btnW && my >= 200 && my <= 200 + btnH)
+            // Resume button
+            if (mx >= 200 && mx <= 200 + btnW && my >= 200 && my <= 200 + btnH)
             {
                 currentState = STATE_GAME;
-                
             }
-           
-           
-                
-              
-            
-           
+            // Settings button
+            else if (mx >= 400 && mx <= 400 + btnW && my >= 200 && my <= 200 + btnH)
+            {
+                currentState = STATE_SETTINGS;
+            }
+            // Menu button
             else if (mx >= 600 && mx <= 600 + btnW && my >= 200 && my <= 200 + btnH)
             {
                 currentState = STATE_MAIN_MENU;
             }
         }
-    }
-
-
 
         else if (currentState == STATE_SETTINGS)
         {
-           
+
             if (mx >= soundOnBtnX && mx <= soundOnBtnX + soundBtnW &&
                 my >= soundOnBtnY && my <= soundOnBtnY + soundBtnH)
             {
                 if (!soundEnabled)
-                { 
+                {
                     toggleSound(true);
                 }
             }
-           
+
             else if (mx >= soundOffBtnX && mx <= soundOffBtnX + soundBtnW &&
                      my >= soundOffBtnY && my <= soundOffBtnY + soundBtnH)
             {
                 if (soundEnabled)
-                { 
+                {
                     toggleSound(false);
                 }
             }
         }
     }
-
+}
 
 void iMovement(int value)
 {
@@ -1696,14 +1634,13 @@ void iSpecialKeyboardUp(unsigned char key, int state)
 {
     if (key == GLUT_KEY_LEFT || key == GLUT_KEY_RIGHT)
     {
-        ballDx = 0; 
+        ballDx = 0;
     }
 }
 int main(int argc, char *argv[])
 {
     printf("Starting game...\n");
 
-    
     playerName[0] = '\0';
     backupOriginalMaps();
 
