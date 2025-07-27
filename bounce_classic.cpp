@@ -7,7 +7,13 @@
 #include <windows.h>
 #include <stdbool.h>
 
-// Game states using enum
+// ========================== CONSTANTS ==========================
+#define MAX_MAP_WIDTH 120
+#define MAX_MAP_HEIGHT 9
+#define MAX_CHECKPOINTS 10
+#define MAX_ENEMIES 50
+
+// ========================== ENUMS ==========================
 typedef enum
 {
     STATE_MAIN_MENU,
@@ -23,63 +29,22 @@ typedef enum
     STATE_EXIT,
     STATE_GAME_OVER,
     STATE_LEADERBOARD
-
 } GameState;
-// ball rotation
-float ballRotation = 0.0f;
-GameState currentState = STATE_MAIN_MENU;
-int lives = 3;
-int bgmChannel = -1;
-int soundEffectChannel = -1;
-// checkpoint
+
+// ========================== STRUCTURES ==========================
 typedef struct
 {
     float x, y;
     bool activated;
 } Checkpoint;
-#define MAX_CHECKPOINTS 10
-Checkpoint checkpoints[MAX_CHECKPOINTS];
-int checkpointCount = 0;
-int lastCheckpointIndex = -1;
-float lastCheckpointX = 200, lastCheckpointY = 300;
 
-bool bgmInitialized = false;
-bool bgmplaying = false;
-bool soundEnabled = true;
-bool gameRunning = true;
-bool canResume = false;
-
-// hover buttion
-int hoveredButton = -1;
-// co-ordinate
-int x, y;
-// Ball
-float ballX = 200, ballY = 300;
-float ballRadius = 20;
-float ballDY = 0;
-float ballDx = 0;
-float gravity = -0.7;
-bool onGround = false;
-// sound button
-int soundOnBtnX = 300, soundOnBtnY = 350, soundBtnW = 150, soundBtnH = 50;
-int soundOffBtnX = 500, soundOffBtnY = 350;
-
-float vx = 0, vy = 0;
-float moveSpeed = 7;
-float jumpSpeed = 22;
-int savedLevel = 0;
-float savedBallX, savedBallY;
-
-int score = 0;
-int currentLevel = 1;
-// score
 typedef struct
 {
     char name[50];
     int score;
     int level;
 } HighScore;
-// moving enemy
+
 typedef struct
 {
     int x, y;      // Grid position
@@ -90,27 +55,76 @@ typedef struct
     float timer;   // Individual timer for each enemy
 } Enemy;
 
-#define MAX_ENEMIES 50
+// ========================== GLOBAL VARIABLES ==========================
+// Game state
+GameState currentState = STATE_MAIN_MENU;
+bool gameRunning = true;
+bool canResume = false;
+
+// Ball properties
+float ballX = 200, ballY = 300;
+float ballRadius = 20;
+float ballDY = 0;
+float ballDx = 0;
+float ballRotation = 0.0f;
+float gravity = -0.7;
+bool onGround = false;
+float vx = 0, vy = 0;
+float moveSpeed = 7;
+float jumpSpeed = 22;
+
+// Game mechanics
+int lives = 3;
+int score = 0;
+int currentLevel = 1;
+int savedLevel = 0;
+float savedBallX, savedBallY;
+
+// Sound system
+int bgmChannel = -1;
+int soundEffectChannel = -1;
+bool bgmInitialized = false;
+bool bgmplaying = false;
+bool soundEnabled = true;
+
+// Checkpoints
+Checkpoint checkpoints[MAX_CHECKPOINTS];
+int checkpointCount = 0;
+int lastCheckpointIndex = -1;
+float lastCheckpointX = 200, lastCheckpointY = 300;
+
+// Enemies
 Enemy enemies[MAX_ENEMIES];
 int enemyCount = 0;
-// compare
-int compareScores(const void *a, const void *b)
-{
-    HighScore *scoreA = (HighScore *)a;
-    HighScore *scoreB = (HighScore *)b;
-    return scoreB->score - scoreA->score;
-}
+
 // Player name system
 char playerName[50] = "";
 int nameLength = 0;
 bool nameEntered = false;
 bool isEnteringName = false;
-void gameOver();
 
-// Map
-#define MAX_MAP_WIDTH 120
-#define MAX_MAP_HEIGHT 8
+// UI elements
+int hoveredButton = -1;
+int x, y;
+
+// Camera system
+float cameraX = 0, cameraY = 0;
+int blockSize = 75;
+int visibleWidth = 1000;
+int visibleHeight = 600;
+
+// Button variables for Main Menu
+int btnX = 800, btnY = 100, btnW = 200, btnH = 50, gap = 20;
+
+// Sound button coordinates
+int soundOnBtnX = 300, soundOnBtnY = 350, soundBtnW = 150, soundBtnH = 50;
+int soundOffBtnX = 500, soundOffBtnY = 350;
+
+// ========================== MAP ARRAYS ==========================
 char level1[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
+    
+    
+    ".......................................................................................................................",
     "#######################################################################################################################",
     "##...######.....P......###.........##.................................................|...............................#",
     "##...######............###....P...........P...........................................c...............................#",
@@ -118,18 +132,23 @@ char level1[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "##...######...####.....###..####..####..####......c....P............c.................##..............................#",
     "##............####..........##     ## ....##.........................................####.............................#",
     "##o......c....####.|....P...##...|....|...##.....|..|.....|.....xx...xx...c..|..c...######....P..xx......|..c...|.....G",
-    "#######################################################################################################################"};
+    "#######################################################################################################################"
+};
+
 char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
+    ".......................................................................................................................",
     "#######################################################################################################################",
     "#.........................##......##..............................##.................##.........##...##...............#",
     "#......................P..##......##..............................##.................##.........##....................#",
     "#..............#########..##..##.........#####....................##........c........##.....................#.........#",
     "#..............##.....##..##..##.........#####....................##.......##........##.........c....##...###.........#",
     "#..............##.............##.........#####............................####..................##...##.....#.........#",
-    "#.......xx...|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx....G",
-    "#######################################################################################################################"};
+    "#.o.....xx...|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx....G",
+    "#######################################################################################################################"
+};
 
 char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
+    ".......................................................................................................................",
     "#######################################################################################################################",
     "#......|...........|.........|....................|........|.........|............||..................................#",
     "#...........................................................................................c.........................#",
@@ -138,44 +157,115 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "#....###...........................###............xx...............#####..............#.........#.....................#",
     "#|.#####..o...|...xxx.......|......###.....|||.....x...c...........#####..P....xx.....#.....|...#....|..c..|.xx.......#",
     "#######################################################################################################################"
-
 };
 
-void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
-void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
-// map backup
+// Map backups
 char level1_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
 char level2_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
 char level3_original[MAX_MAP_HEIGHT][MAX_MAP_WIDTH];
+
+// ========================== FUNCTION DECLARATIONS ==========================
+// Core game functions
+void initializeLevel();
+void updatePhysics();
+void gameOver();
+
+// Map and backup functions
+void backupOriginalMaps();
+void restoreOriginalMaps();
+void findStartingPosition(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH], float* startX, float* startY);
+
+// Checkpoint system
+void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void respawnAtCheckpoint();
+
+// Enemy system
 void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void drawEnemies();
+void checkEnemyCollision();
+
+// Collision and physics
+void collision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void checkVictory(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+
+// Camera system
+void updateCameraPosition();
+void limitBallPosition();
+
+// Drawing functions
+void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH]);
+void drawRotatedBall(int x, int y, const char *imagePath, float angle);
+
+// Sound system
+void toggleSound(bool enable);
+
+// Player and scoring
+void initializePlayerName();
+void savePlayerScore(const char *name, int playerScore, int level);
+void displayHighScore();
+void displayLeaderboard();
+int compareScores(const void *a, const void *b);
+
+// ========================== FUNCTION IMPLEMENTATIONS ==========================
+
+// Score comparison for sorting
+int compareScores(const void *a, const void *b)
+{
+    HighScore *scoreA = (HighScore *)a;
+    HighScore *scoreB = (HighScore *)b;
+    return scoreB->score - scoreA->score;
+}
+
+// Map backup and restoration functions
 void backupOriginalMaps()
 {
     memcpy(level1_original, level1, sizeof(level1));
     memcpy(level2_original, level2, sizeof(level2));
     memcpy(level3_original, level3, sizeof(level3));
 }
-// Camera position
-float cameraX = 0, cameraY = 0;
-int blockSize = 75;
-int visibleWidth = 1000;
-int visibleHeight = 600;
 
-// Button variables for Main Menu
-int btnX = 800, btnY = 100, btnW = 200, btnH = 50, gap = 20;
-//
 void restoreOriginalMaps()
 {
     memcpy(level1, level1_original, sizeof(level1));
     memcpy(level2, level2_original, sizeof(level2));
     memcpy(level3, level3_original, sizeof(level3));
 }
-// sound on off
+
+// Find starting position marked with 'o'
+void findStartingPosition(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH], float* startX, float* startY)
+{
+    // Default position in case 'o' is not found
+    *startX = 200;
+    *startY = 300;
+    
+    for (int y = 0; y < MAX_MAP_HEIGHT; y++)
+    {
+        for (int x = 0; x < MAX_MAP_WIDTH; x++)
+        {
+            if (map[y][x] == 'o')
+            {
+                // Convert map coordinates to world coordinates
+                *startX = x * blockSize + blockSize / 2;
+                *startY = (MAX_MAP_HEIGHT - y - 1) * blockSize + blockSize / 2;
+                
+                // Remove the 'o' marker from the map so it doesn't interfere with gameplay
+                map[y][x] = '.';
+                return; // Found it, exit the function
+            }
+        }
+    }
+}
+
+// Sound toggle function
 void toggleSound(bool enable)
 {
     soundEnabled = enable;
     if (!enable)
     {
-
         iStopAllSounds();
         bgmChannel = -1;
         bgmplaying = false;
@@ -183,47 +273,53 @@ void toggleSound(bool enable)
     }
     else
     {
-
         bgmInitialized = false;
     }
 }
+
 // Initialize game for new level
 void initializeLevel()
 {
     lives = 3;
-    ballX = 200;
-    ballY = 300;
     ballDY = 0;
     ballDx = 0;
     vx = 0;
     vy = 0;
     score = 0;
     ballRotation = 0.0f;
-
     onGround = false;
     cameraX = 0;
     cameraY = 0;
 
-    // Initialize checkpoints for current level
+    // Restore original maps first
+    restoreOriginalMaps();
+    
+    // Find and set the starting position based on current level
     if (currentLevel == 1)
     {
+        findStartingPosition(level1, &ballX, &ballY);
         initializeEnemies(level1);
         initializeCheckpoints(level1);
     }
     else if (currentLevel == 2)
     {
+        findStartingPosition(level2, &ballX, &ballY);
         initializeEnemies(level2);
         initializeCheckpoints(level2);
     }
     else if (currentLevel == 3)
     {
+        findStartingPosition(level3, &ballX, &ballY);
         initializeEnemies(level3);
         initializeCheckpoints(level3);
     }
-
-    restoreOriginalMaps();
+    
+    // Set initial checkpoint position to the starting position
+    lastCheckpointX = ballX;
+    lastCheckpointY = ballY;
 }
-// checkpoint indicate
+
+// Initialize checkpoints
 void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     checkpointCount = 0;
@@ -248,7 +344,8 @@ void initializeCheckpoints(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         }
     }
 }
-// checkpoint collision hit
+
+// Check checkpoint collision
 void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     for (int i = 0; i < checkpointCount; i++)
@@ -282,7 +379,8 @@ void checkCheckpointCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         }
     }
 }
-// respawn
+
+// Respawn at checkpoint
 void respawnAtCheckpoint()
 {
     ballX = lastCheckpointX;
@@ -294,18 +392,21 @@ void respawnAtCheckpoint()
     ballRotation = 0.0f;
     onGround = false;
 
-    // Update camera to follow ball
+    // Update camera to follow ball on both axes
     cameraX = ballX - visibleWidth / 2;
-    cameraY = 0;
-    if (cameraX < 0)
-        cameraX = 0;
+    cameraY = ballY - visibleHeight / 2;
+    
+    // Apply camera boundaries
+    if (cameraX < 0) cameraX = 0;
     if (cameraX > MAX_MAP_WIDTH * blockSize - visibleWidth)
-    {
         cameraX = MAX_MAP_WIDTH * blockSize - visibleWidth;
-    }
+    
+    if (cameraY < 0) cameraY = 0;
+    if (cameraY > MAX_MAP_HEIGHT * blockSize - visibleHeight)
+        cameraY = MAX_MAP_HEIGHT * blockSize - visibleHeight;
 }
 
-// moving enemies
+// Initialize enemies
 void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     enemyCount = 0;
@@ -321,21 +422,19 @@ void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
                     enemies[enemyCount].x = x;
                     enemies[enemyCount].y = y;
                     enemies[enemyCount].offset = 0;
-
                     enemies[enemyCount].speed = 1.0f + (rand() % 3) * 0.3f;
                     enemies[enemyCount].direction = (rand() % 2) ? 1 : -1;
                     enemies[enemyCount].active = true;
-
                     enemies[enemyCount].timer = rand() % 100;
                     enemyCount++;
                 }
-
                 map[y][x] = '.';
             }
         }
     }
 }
-// position for enemy
+
+// Update enemy positions
 void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     for (int i = 0; i < enemyCount; i++)
@@ -344,7 +443,6 @@ void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
             continue;
 
         enemies[i].timer += 1.0f;
-
         enemies[i].offset += enemies[i].direction * enemies[i].speed * 0.02f;
 
         if (enemies[i].offset > 1.5f)
@@ -369,7 +467,8 @@ void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         }
     }
 }
-// drawing enemy
+
+// Draw enemies
 void drawEnemies()
 {
     for (int i = 0; i < enemyCount; i++)
@@ -393,7 +492,38 @@ void drawEnemies()
     }
 }
 
-// Initialize player name for new game session
+// Check enemy collision
+void checkEnemyCollision()
+{
+    for (int i = 0; i < enemyCount; i++)
+    {
+        if (!enemies[i].active)
+            continue;
+
+        float enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
+        float enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
+
+        float dx = ballX - enemyWorldX;
+        float dy = ballY - enemyWorldY;
+        float distance = sqrt(dx * dx + dy * dy);
+
+        if (distance < ballRadius + (blockSize / 2) * 0.8f)
+        {
+            lives--;
+            if (lives <= 0)
+            {
+                currentState = STATE_GAME_OVER;
+            }
+            else
+            {
+                respawnAtCheckpoint();
+            }
+            return;
+        }
+    }
+}
+
+// Initialize player name
 void initializePlayerName()
 {
     memset(playerName, 0, sizeof(playerName));
@@ -402,15 +532,16 @@ void initializePlayerName()
     isEnteringName = false;
 }
 
+// Display leaderboard
 void displayLeaderboard()
 {
     FILE *file = fopen("highscore.txt", "r");
     if (file == NULL)
     {
         iSetColor(255, 255, 255);
-        iText(400, 300, "No high scores yet!", GLUT_BITMAP_HELVETICA_18);
+        iText(400, 300, "No high scores yet!", GLUT_BITMAP_8_BY_13);
         iSetColor(0, 23, 66);
-        iText(350, 30, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
+        iText(350, 30, "Press 'b' to go back to Main Menu", GLUT_BITMAP_TIMES_ROMAN_24);
         return;
     }
 
@@ -425,7 +556,6 @@ void displayLeaderboard()
 
         if (sscanf(line, "%49s - Level %d: %d", tempName, &tempLevel, &tempScore) == 3)
         {
-
             int existingIndex = -1;
             for (int i = 0; i < count; i++)
             {
@@ -438,7 +568,6 @@ void displayLeaderboard()
 
             if (existingIndex != -1)
             {
-
                 if (tempScore > scores[existingIndex].score)
                 {
                     scores[existingIndex].level = tempLevel;
@@ -447,7 +576,6 @@ void displayLeaderboard()
             }
             else
             {
-
                 strcpy(scores[count].name, tempName);
                 scores[count].level = tempLevel;
                 scores[count].score = tempScore;
@@ -501,19 +629,20 @@ void displayLeaderboard()
     iText(350, 40, "Press 'b' to go back to Main Menu", GLUT_BITMAP_HELVETICA_18);
 }
 
+// Draw map
 void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     int startX = (int)(cameraX / blockSize) - 1;
     int endX = (int)((cameraX + visibleWidth) / blockSize) + 1;
-    int startY = 0;
-    int endY = MAX_MAP_HEIGHT;
+    int startY = (int)(cameraY / blockSize) - 1;
+    int endY = (int)((cameraY + visibleHeight) / blockSize) + 1;
 
-    if (startX < 0)
-        startX = 0;
-    if (endX >= MAX_MAP_WIDTH)
-        endX = MAX_MAP_WIDTH - 1;
+    if (startX < 0) startX = 0;
+    if (endX >= MAX_MAP_WIDTH) endX = MAX_MAP_WIDTH - 1;
+    if (startY < 0) startY = 0;
+    if (endY >= MAX_MAP_HEIGHT) endY = MAX_MAP_HEIGHT - 1;
 
-    for (int y = startY; y < endY; y++)
+    for (int y = startY; y <= endY; y++)
     {
         for (int x = startX; x <= endX; x++)
         {
@@ -553,43 +682,22 @@ void drawMap(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 
     drawEnemies();
 }
-// collision with enemy
-void checkEnemyCollision()
-{
-    for (int i = 0; i < enemyCount; i++)
-    {
-        if (!enemies[i].active)
-            continue;
 
-        float enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
-        float enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
-
-        float dx = ballX - enemyWorldX;
-        float dy = ballY - enemyWorldY;
-        float distance = sqrt(dx * dx + dy * dy);
-
-        if (distance < ballRadius + (blockSize / 2) * 0.8f)
-        {
-            lives--;
-            if (lives <= 0)
-            {
-                currentState = STATE_GAME_OVER;
-            }
-            else
-            {
-                respawnAtCheckpoint();
-            }
-            return;
-        }
-    }
-}
-
+// Update camera position
 void updateCameraPosition()
 {
     float centerX = visibleWidth / 2.0f;
+    float centerY = visibleHeight / 2.0f;
+    
+    // Horizontal bounds
     float leftBound = centerX - 200;
     float rightBound = centerX + 200;
+    
+    // Vertical bounds - smaller range so camera moves when ball crosses half screen
+    float bottomBound = centerY - 50;  // Reduced from 150 to 50
+    float topBound = centerY + 50;     // Reduced from 150 to 50
 
+    // Find rightmost block for X boundary
     int rightmostBlock = 0;
     for (int y = 0; y < MAX_MAP_HEIGHT; y++)
     {
@@ -605,38 +713,52 @@ void updateCameraPosition()
         }
     }
 
+    // Calculate maximum camera positions
     float maxCameraX = (rightmostBlock + 1) * blockSize - visibleWidth;
+    float maxCameraY = MAX_MAP_HEIGHT * blockSize - visibleHeight;
 
-    if (maxCameraX < 0)
-    {
-        maxCameraX = 0;
-    }
+    if (maxCameraX < 0) maxCameraX = 0;
+    if (maxCameraY < 0) maxCameraY = 0;
 
     float newCameraX = cameraX;
+    float newCameraY = cameraY;
 
+    // Update X camera position
     if (ballX - cameraX < leftBound)
         newCameraX = ballX - leftBound;
     else if (ballX - cameraX > rightBound)
         newCameraX = ballX - rightBound;
 
-    newCameraX = fmax(0, fmin(newCameraX, maxCameraX));
+    // Update Y camera position
+    if (ballY - cameraY < bottomBound)
+        newCameraY = ballY - bottomBound;
+    else if (ballY - cameraY > topBound)
+        newCameraY = ballY - topBound;
 
-    float newCameraY = fmax(0, fmin(cameraY, MAX_MAP_HEIGHT * blockSize - visibleHeight));
+    // Apply boundaries
+    newCameraX = fmax(0, fmin(newCameraX, maxCameraX));
+    newCameraY = fmax(0, fmin(newCameraY, maxCameraY));
 
     cameraX = newCameraX;
     cameraY = newCameraY;
 }
 
+// Limit ball position
 void limitBallPosition()
 {
+    // Horizontal limits
     if (ballX - ballRadius < cameraX)
         ballX = cameraX + ballRadius + 300;
     if (ballX + ballRadius > cameraX + visibleWidth)
         ballX = cameraX + visibleWidth - ballRadius - 300;
-    if (ballY - ballRadius < cameraY)
-        ballY = cameraY + ballRadius;
-    if (ballY + ballRadius > cameraY + visibleHeight)
-        ballY = cameraY + visibleHeight - ballRadius;
+    
+    // Vertical limits - more lenient to allow vertical exploration
+    if (ballY - ballRadius < cameraY - 100)
+        ballY = cameraY + ballRadius - 100;
+    if (ballY + ballRadius > cameraY + visibleHeight + 100)
+        ballY = cameraY + visibleHeight - ballRadius + 100;
+    
+    // Ground collision - absolute minimum
     if (ballY < ballRadius)
     {
         ballY = ballRadius;
@@ -645,6 +767,7 @@ void limitBallPosition()
     }
 }
 
+// Check spike collision
 void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     int tileX = (int)(ballX / blockSize);
@@ -701,6 +824,7 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     }
 }
 
+// Check victory condition
 void checkVictory(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     int tileX = (int)(ballX / blockSize);
@@ -715,6 +839,7 @@ void checkVictory(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     }
 }
 
+// Handle collision detection
 void collision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     // Vertical Collision Detection
@@ -768,6 +893,7 @@ void collision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     }
 }
 
+// Handle item collection
 void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
     int tileX = (int)(ballX / blockSize);
@@ -787,6 +913,7 @@ void collection(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     }
 }
 
+// Update physics and game mechanics
 void updatePhysics()
 {
     if (currentState != STATE_GAME)
@@ -855,22 +982,18 @@ void updatePhysics()
     updateCameraPosition();
     checkEnemyCollision();
 }
-// rotate func
+
+// Draw rotated ball
 void drawRotatedBall(int x, int y, const char *imagePath, float angle)
 {
-
     glPushMatrix();
-
     glTranslatef(x + ballRadius, y + ballRadius, 0);
-
     glRotatef(angle, 0, 0, 1);
-
     iShowImage(-ballRadius, -ballRadius, imagePath);
-
     glPopMatrix();
 }
 
-// Save player name and score to highscore.txt
+// Save player score
 void savePlayerScore(const char *name, int playerScore, int level)
 {
     FILE *file = fopen("highscore.txt", "a");
@@ -881,6 +1004,7 @@ void savePlayerScore(const char *name, int playerScore, int level)
     }
 }
 
+// Game over function
 void gameOver()
 {
     if (nameEntered && strlen(playerName) > 0)
@@ -890,7 +1014,7 @@ void gameOver()
     currentState = STATE_GAME_OVER;
 }
 
-// Display high scores from file
+// Display high score
 void displayHighScore()
 {
     FILE *file = fopen("highscore.txt", "r");
@@ -926,6 +1050,8 @@ void displayHighScore()
     }
 }
 
+// ========================== iGRAPHICS CALLBACK FUNCTIONS ==========================
+
 void iDraw()
 {
     iClear();
@@ -939,6 +1065,7 @@ void iDraw()
             bgmInitialized = true;
         }
     }
+    
     if (currentState == STATE_MAIN_MENU)
     {
         iShowImage(0, 0, "assets/images/wallpaper.bmp");
@@ -996,6 +1123,7 @@ void iDraw()
         {
             iShowImage(btnX, btnY + 1 * (btnH + gap), "assets/images/about_us.bmp");
         }
+        
         if (canResume)
         {
             if (hoveredButton == 6)
@@ -1042,7 +1170,6 @@ void iDraw()
             iText(50, 550, welcomeText, GLUT_BITMAP_HELVETICA_18);
         }
     }
-
     else if (currentState == STATE_GAME)
     {
         if (currentLevel == 1)
@@ -1169,7 +1296,7 @@ void iDraw()
             iShowImage(200, 200, "assets/images/resume.bmp");
         }
 
-        // Settings button (new)
+        // Settings button
         if (hoveredButton == 1)
         {
             iShowImage(400, 200, "assets/images/settings1.bmp");
@@ -1189,15 +1316,12 @@ void iDraw()
             iShowImage(600, 200, "assets/images/menu.bmp");
         }
     }
-
     else if (currentState == STATE_ABOUT_US)
     {
-
         iShowImage(0, 0, "assets/images/about_us_main.bmp");
         iSetColor(0, 23, 66);
         iText(100, 30, "Press 'b' to return to Main Menu", GLUT_BITMAP_HELVETICA_18);
     }
-
     else if (currentState == STATE_GAME_OVER)
     {
         iShowImage(0, 0, "assets/images/game-over.bmp");
@@ -1261,6 +1385,8 @@ void iKeyboard(unsigned char key, int state)
         }
         return;
     }
+    
+    // Handle navigation keys
     if ((key == 'b' || key == 'B') && currentState == STATE_LEADERBOARD)
     {
         currentState = STATE_MAIN_MENU;
@@ -1270,7 +1396,6 @@ void iKeyboard(unsigned char key, int state)
         currentState = STATE_MAIN_MENU;
         initializeLevel();
     }
-
     if ((key == 'b' || key == 'B') && currentState == STATE_SETTINGS)
     {
         if (canResume)
@@ -1282,15 +1407,16 @@ void iKeyboard(unsigned char key, int state)
             currentState = STATE_MAIN_MENU;
         }
     }
-
     if ((key == 'b' || key == 'B') && currentState == STATE_INSTRUCTIONS)
     {
         currentState = STATE_MAIN_MENU;
     }
-    if ((key == 'b' || key == 'B') && currentState == STATE_SETTINGS)
+    if ((key == 'b' || key == 'B') && currentState == STATE_ABOUT_US)
     {
         currentState = STATE_MAIN_MENU;
     }
+    
+    // Game controls
     if (key == ' ' && onGround && currentState == STATE_GAME)
     {
         ballDY = jumpSpeed;
@@ -1301,37 +1427,14 @@ void iKeyboard(unsigned char key, int state)
         ballDY = 10;
         onGround = false;
     }
-
-    if (currentState == STATE_VICTORY)
-    {
-        lives = 3;
-
-        if (nameEntered && strlen(playerName) > 0)
-        {
-            savePlayerScore(playerName, score, currentLevel);
-        }
-        if (currentLevel < 3)
-        {
-            currentLevel++;
-            initializeLevel();
-            currentState = STATE_GAME;
-            canResume = false;
-        }
-        else
-        {
-            currentState = STATE_MAIN_MENU;
-            initializeLevel();
-            canResume = false;
-        }
-    }
-
+    
+    // Game state transitions
     if (currentState == STATE_GAME_OVER && (key == 'b' || key == 'B'))
     {
         currentState = STATE_MAIN_MENU;
         canResume = false;
         initializeLevel();
     }
-
     if ((key == 'p' || key == 'P') && currentState == STATE_GAME)
     {
         // Save current game state when pausing
@@ -1341,17 +1444,14 @@ void iKeyboard(unsigned char key, int state)
         canResume = true;
         currentState = STATE_PAUSE;
     }
-
     if (currentState == STATE_VICTORY && (key == 'b' || key == 'B'))
     {
-        currentState = STATE_LEVEL_SELECT;
+        currentState = STATE_MAIN_MENU;
+        canResume = false;
         initializeLevel();
     }
-    if (currentState == STATE_ABOUT_US && (key == 'b' || key == 'B'))
-    {
-        currentState = STATE_MAIN_MENU;
-    }
-
+    
+    // Level selection
     if (currentState == STATE_LEVEL_SELECT)
     {
         if (key == '1')
@@ -1373,7 +1473,8 @@ void iKeyboard(unsigned char key, int state)
             currentState = STATE_GAME;
         }
     }
-
+    
+    // Victory progression
     if (currentState == STATE_VICTORY && (key == 'n' || key == 'N'))
     {
         // Save score when level is completed
@@ -1403,7 +1504,6 @@ void iMouseMove(int mx, int my)
 {
     if (currentState == STATE_MAIN_MENU)
     {
-
         if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 5 * (btnH + gap) && my <= btnY + 5 * (btnH + gap) + btnH)
         {
             hoveredButton = 0; // Start button
@@ -1420,16 +1520,14 @@ void iMouseMove(int mx, int my)
         {
             hoveredButton = 3; // Leaderboard button
         }
-
         else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH)
         {
-            hoveredButton = 5; // about us button
+            hoveredButton = 5; // About us button
         }
         else if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH)
         {
             hoveredButton = 4; // Exit button
         }
-
         else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
         {
             if (canResume)
@@ -1437,7 +1535,6 @@ void iMouseMove(int mx, int my)
                 hoveredButton = 6; // Resume button
             }
         }
-
         else
         {
             hoveredButton = -1;
@@ -1446,7 +1543,6 @@ void iMouseMove(int mx, int my)
         score = 0;
         lives = 3;
     }
-
     else if (currentState == STATE_LEVEL_SELECT)
     {
         if (mx >= 50 && mx <= 320 && my >= 50 && my <= 300)
@@ -1462,7 +1558,6 @@ void iMouseMove(int mx, int my)
             hoveredButton = 2; // Level 3 button
         }
     }
-
     else if (currentState == STATE_PAUSE)
     {
         if (mx >= 200 && mx <= 200 + btnW && my >= 200 && my <= 200 + btnH)
@@ -1483,7 +1578,9 @@ void iMouseMove(int mx, int my)
         }
     }
 }
+
 void iMouseDrag(int mx, int my) {}
+
 void iMouseWheel(int dir, int mx, int my) {}
 
 void iMouse(int button, int state, int mx, int my)
@@ -1508,7 +1605,6 @@ void iMouse(int button, int state, int mx, int my)
             {
                 currentState = STATE_INSTRUCTIONS;
             }
-
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 1 * (btnH + gap) && my <= btnY + 1 * (btnH + gap) + btnH)
             {
                 currentState = STATE_ABOUT_US;
@@ -1521,14 +1617,13 @@ void iMouse(int button, int state, int mx, int my)
             {
                 currentState = STATE_LEADERBOARD;
             }
-
             else if (mx >= btnX && mx <= btnX + btnW && my >= btnY + 6 * (btnH + gap) && my <= btnY + 6 * (btnH + gap) + btnH)
             {
                 if (canResume)
                 {
                     currentState = STATE_GAME;
                     ballX = savedBallX;
-                    ballY = savedBallY;
+ballY = savedBallY;
                     currentLevel = savedLevel;
                 }
             }
