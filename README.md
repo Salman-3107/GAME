@@ -22,10 +22,8 @@ This is a classic "Bounce" game developed using the iGraphics library. The game 
 - **iGraphics library** for graphical rendering and game development.
 
 ## How to Run the Game
-1. Ensure you have the following installed:
+ Ensure you have the following installed:
    - **C++ Compiler** (e.g., GCC)
    - **iGraphics library**: Download and set up the iGraphics library from [iGraphics Official Website](https://www.igrafix.com)
    
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/bounce-classic.git
+
