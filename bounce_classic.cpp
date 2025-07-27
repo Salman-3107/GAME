@@ -63,7 +63,7 @@ bool canResume = false;
 
 // Ball properties
 float ballX = 200, ballY = 300;
-float ballRadius = 20;
+float ballRadius = 25;
 float ballDY = 0;
 float ballDx = 0;
 float ballRotation = 0.0f;
@@ -1284,36 +1284,36 @@ void iDraw()
 
         // Draw the ball
         drawRotatedBall(ballX - cameraX - ballRadius, ballY - cameraY - ballRadius, "assets/images/ball.bmp", ballRotation);
-        iShowImage(100, 105, "assets/images/pause.bmp");
+        iShowImage(100, 30, "assets/images/pause.bmp");
 
         // Resume button
         if (hoveredButton == 0)
         {
-            iShowImage(200, 200, "assets/images/resume1.bmp");
+            iShowImage(250, 300, "assets/images/resume1.bmp");
         }
         else
         {
-            iShowImage(200, 200, "assets/images/resume.bmp");
+            iShowImage(250, 300, "assets/images/resume.bmp");
         }
 
         // Settings button
         if (hoveredButton == 1)
         {
-            iShowImage(400, 200, "assets/images/settings1.bmp");
+            iShowImage(450, 300, "assets/images/settings1.bmp");
         }
         else
         {
-            iShowImage(400, 200, "assets/images/settings.bmp");
+            iShowImage(450, 300, "assets/images/settings.bmp");
         }
 
         // Menu button
         if (hoveredButton == 2)
         {
-            iShowImage(600, 200, "assets/images/menu1.bmp");
+            iShowImage(650, 300, "assets/images/menu1.bmp");
         }
         else
         {
-            iShowImage(600, 200, "assets/images/menu.bmp");
+            iShowImage(650, 300, "assets/images/menu.bmp");
         }
     }
     else if (currentState == STATE_ABOUT_US)
@@ -1560,15 +1560,15 @@ void iMouseMove(int mx, int my)
     }
     else if (currentState == STATE_PAUSE)
     {
-        if (mx >= 200 && mx <= 200 + btnW && my >= 200 && my <= 200 + btnH)
+        if (mx >= 250 && mx <= 250 + btnW && my >= 300 && my <= 300 + btnH)
         {
             hoveredButton = 0; // Resume button
         }
-        else if (mx >= 400 && mx <= 400 + btnW && my >= 200 && my <= 200 + btnH)
+        else if (mx >= 450 && mx <= 450 + btnW && my >= 300 && my <= 300 + btnH)
         {
             hoveredButton = 1; // Settings button
         }
-        else if (mx >= 600 && mx <= 600 + btnW && my >= 200 && my <= 200 + btnH)
+        else if (mx >= 650 && mx <= 650 + btnW && my >= 300 && my <= 300 + btnH)
         {
             hoveredButton = 2; // Menu button
         }
@@ -1623,7 +1623,7 @@ void iMouse(int button, int state, int mx, int my)
                 {
                     currentState = STATE_GAME;
                     ballX = savedBallX;
-ballY = savedBallY;
+                ballY = savedBallY;
                     currentLevel = savedLevel;
                 }
             }
@@ -1677,17 +1677,17 @@ ballY = savedBallY;
         else if (currentState == STATE_PAUSE)
         {
             // Resume button
-            if (mx >= 200 && mx <= 200 + btnW && my >= 200 && my <= 200 + btnH)
+            if (mx >= 250 && mx <= 250 + btnW && my >= 300 && my <= 300 + btnH)
             {
                 currentState = STATE_GAME;
             }
             // Settings button
-            else if (mx >= 400 && mx <= 400 + btnW && my >= 200 && my <= 200 + btnH)
+            else if (mx >= 450 && mx <= 450 + btnW && my >= 300 && my <= 300 + btnH)
             {
                 currentState = STATE_SETTINGS;
             }
             // Menu button
-            else if (mx >= 600 && mx <= 600 + btnW && my >= 200 && my <= 200 + btnH)
+            else if (mx >= 650 && mx <= 650 + btnW && my >= 300 && my <= 300 + btnH)
             {
                 currentState = STATE_MAIN_MENU;
             }
@@ -1720,7 +1720,7 @@ ballY = savedBallY;
 void iMovement(int value)
 {
     updatePhysics();
-    glutTimerFunc(8, iMovement, 0);
+    glutTimerFunc(16, iMovement, 0);
 }
 
 void iSpecialKeyboard(unsigned char key, int state) {}
@@ -1741,7 +1741,7 @@ int main(int argc, char *argv[])
 
     glutInit(&argc, argv);
     iInitializeSound();
-    glutTimerFunc(8, iMovement, 0);
+    glutTimerFunc(16, iMovement, 0);
     iOpenWindow(1000, 600, "Bounce Classic");
     atexit(iFreeSound);
 
