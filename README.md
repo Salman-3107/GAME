@@ -24,6 +24,6 @@ This is a classic "Bounce" game developed using the iGraphics library. The game 
 ## How to Run the Game
  Ensure you have the following installed:
    - **C/C++ Compiler** (e.g., GCC)
-   - **iGraphics library**: Download and set up the iGraphics library from [this link]([https://www.igrafix.com](https://github.com/mahirlabibdihan/Modern-iGraphics/blob/8e4758f379ab15dfee0e536fb4503c6e121afe8c/README.md])
+   - **iGraphics library**: Download and set up the iGraphics library from [this link]([https://www.igrafix.com](https://github.com/mahirlabibdihan/Modern-iGraphics/blob/8e4758f379ab15dfee0e536fb4503c6e121afe8c/README.md))
    
 
