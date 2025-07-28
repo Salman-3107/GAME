@@ -49,11 +49,12 @@ typedef struct
 typedef struct
 {
     int x, y;      // Grid position
-    float offset;  // Current offset from grid position
-    float speed;   // Movement speed
-    int direction; // 1 for right, -1 for left
-    bool active;   // Whether enemy is active
+    float offset;  
+    float speed;   
+    int direction; // 1 for right/up, -1 for left/down
+    bool active;   
     float timer;   // Individual timer for each enemy
+    int moveType;  // 0 for horizontal (x), 1 for vertical (y)
 } Enemy;
 
 // ========================== GLOBAL VARIABLES ==========================
@@ -129,9 +130,9 @@ char level1[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "##...######.....P......###.........##.................................................|...............................#",
     "##...######............###....P...........P...........................................c...............................#",
     "##...######...####.....###.........c..................................................#...............................#",
-    "##...######...####.....###..####..####..####......c....P............c.................##..............................#",
+    "##...######...####.....###..####..####..####......c....P...........c.yy...............##..............................#",
     "##............####..........##     ## ....##.........................................####.............................#",
-    "##o......c....####.|....P...##...|....|...##.....|..|.....|.....xx...xx...c..|..c...######....P..xx......|..c...|.....G",
+    "##o......c....####.|....P...##...|....|...##.....|..|.....|.....xx........c..|..c...######....P..xx......|..c...|.....G",
     "#######################################################################################################################"};
 
 char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
@@ -140,9 +141,9 @@ char level2[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "#.........................##......##..............................##.................##.........##...##...............#",
     "#......................P..##......##..............................##.................##.........##....................#",
     "#..............#########..##..##.........#####....................##........c........##.....................#.........#",
-    "#..............##.....##..##..##.........#####....................##.......##........##.........c....##...###.........#",
+    "#..............##.....##..##..##.........#####.........yy.........##.......##........##...yy....c....##...###.........#",
     "#..............##.............##.........#####............................####..................##...##.....#.........#",
-    "#.o.....xx...|.##..........c..##.........#####...xx....xx....xx....P.....######......P....xx....##...##.....#...xx....G",
+    "#.o.....xx...|.##..........c..##.........#####...xx..........xx....P.....######......P..........##...##.....#...xx....G",
     "#######################################################################################################################"};
 
 char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
@@ -151,9 +152,9 @@ char level3[MAX_MAP_HEIGHT][MAX_MAP_WIDTH] = {
     "#......|...........|.........|....................|........|.........|............||..................................#",
     "#...........................................................................................c.........................#",
     "#......c............................P....................c.........#####..............###.......x.....................#",
-    "#.....#............................###.............................#####..............#####..####.....................G",
+    "#.....#............................###.........................y...#####..............#####..####............y........G",
     "#....###...........................###............xx...............#####..............#.........#.....................#",
-    "#|.#####..o...|...xxx.......|......###.....|||.....x...c...........#####..P....xx.....#.....|...#....|..c..|.xx.......#",
+    "#|.#####..o...|...xxx.......|......###.....|||.....x...c...........#####..P....xx.....#.....|...#....|..c..|..x.......#",
     "#######################################################################################################################"};
 
 // Map backups
@@ -414,7 +415,7 @@ void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     {
         for (int x = 0; x < MAX_MAP_WIDTH; x++)
         {
-            if (map[y][x] == 'x')
+            if (map[y][x] == 'x' || map[y][x] == 'y')
             {
                 if (enemyCount < MAX_ENEMIES)
                 {
@@ -425,9 +426,20 @@ void initializeEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
                     enemies[enemyCount].direction = (rand() % 2) ? 1 : -1;
                     enemies[enemyCount].active = true;
                     enemies[enemyCount].timer = rand() % 100;
+                    
+                    // Set movement type based on character
+                    if (map[y][x] == 'x')
+                    {
+                        enemies[enemyCount].moveType = 0; // Horizontal movement
+                    }
+                    else if (map[y][x] == 'y')
+                    {
+                        enemies[enemyCount].moveType = 1; // Vertical movement
+                    }
+                    
                     enemyCount++;
                 }
-                map[y][x] = '.';
+                map[y][x] = '.'; // Remove the marker from map
             }
         }
     }
@@ -444,24 +456,53 @@ void updateEnemies(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
         enemies[i].timer += 1.0f;
         enemies[i].offset += enemies[i].direction * enemies[i].speed * 0.02f;
 
-        if (enemies[i].offset > 1.5f)
+        // Check boundaries and collisions based on movement type
+        if (enemies[i].moveType == 0) // Horizontal movement (x enemies)
         {
-            enemies[i].offset = 1.5f;
-            enemies[i].direction = -1;
-        }
-        else if (enemies[i].offset < -1.5f)
-        {
-            enemies[i].offset = -1.5f;
-            enemies[i].direction = 1;
-        }
-
-        int checkX = enemies[i].x + (int)enemies[i].offset;
-        if (checkX >= 0 && checkX < MAX_MAP_WIDTH &&
-            enemies[i].y >= 0 && enemies[i].y < MAX_MAP_HEIGHT)
-        {
-            if (map[enemies[i].y][checkX] == '#')
+            if (enemies[i].offset > 1.5f)
             {
-                enemies[i].direction = -enemies[i].direction;
+                enemies[i].offset = 1.5f;
+                enemies[i].direction = -1;
+            }
+            else if (enemies[i].offset < -1.5f)
+            {
+                enemies[i].offset = -1.5f;
+                enemies[i].direction = 1;
+            }
+
+            // Check for brick collision in horizontal direction
+            int checkX = enemies[i].x + (int)enemies[i].offset;
+            if (checkX >= 0 && checkX < MAX_MAP_WIDTH &&
+                enemies[i].y >= 0 && enemies[i].y < MAX_MAP_HEIGHT)
+            {
+                if (map[enemies[i].y][checkX] == '#')
+                {
+                    enemies[i].direction = -enemies[i].direction;
+                }
+            }
+        }
+        else if (enemies[i].moveType == 1) // Vertical movement (y enemies)
+        {
+            if (enemies[i].offset > 1.5f)
+            {
+                enemies[i].offset = 1.5f;
+                enemies[i].direction = -1;
+            }
+            else if (enemies[i].offset < -1.5f)
+            {
+                enemies[i].offset = -1.5f;
+                enemies[i].direction = 1;
+            }
+
+            // Check for brick collision in vertical direction
+            int checkY = enemies[i].y + (int)enemies[i].offset;
+            if (checkY >= 0 && checkY < MAX_MAP_HEIGHT &&
+                enemies[i].x >= 0 && enemies[i].x < MAX_MAP_WIDTH)
+            {
+                if (map[checkY][enemies[i].x] == '#')
+                {
+                    enemies[i].direction = -enemies[i].direction;
+                }
             }
         }
     }
@@ -475,9 +516,18 @@ void drawEnemies()
         if (!enemies[i].active)
             continue;
 
-        // Calculate screen position
-        float worldX = (enemies[i].x + enemies[i].offset) * blockSize;
-        float worldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize;
+        float worldX, worldY;
+        
+        if (enemies[i].moveType == 0) // Horizontal movement
+        {
+            worldX = (enemies[i].x + enemies[i].offset) * blockSize;
+            worldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize;
+        }
+        else // Vertical movement
+        {
+            worldX = enemies[i].x * blockSize;
+            worldY = (MAX_MAP_HEIGHT - enemies[i].y - 1 - enemies[i].offset) * blockSize;
+        }
 
         int screenX = (int)(worldX - cameraX);
         int screenY = (int)(worldY - cameraY);
@@ -490,7 +540,6 @@ void drawEnemies()
         }
     }
 }
-
 // Check enemy collision
 void checkEnemyCollision()
 {
@@ -499,8 +548,18 @@ void checkEnemyCollision()
         if (!enemies[i].active)
             continue;
 
-        float enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
-        float enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
+        float enemyWorldX, enemyWorldY;
+        
+        if (enemies[i].moveType == 0) // Horizontal movement
+        {
+            enemyWorldX = (enemies[i].x + enemies[i].offset) * blockSize + blockSize / 2;
+            enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1) * blockSize + blockSize / 2;
+        }
+        else // Vertical movement
+        {
+            enemyWorldX = enemies[i].x * blockSize + blockSize / 2;
+            enemyWorldY = (MAX_MAP_HEIGHT - enemies[i].y - 1 - enemies[i].offset) * blockSize + blockSize / 2;
+        }
 
         float dx = ballX - enemyWorldX;
         float dy = ballY - enemyWorldY;
