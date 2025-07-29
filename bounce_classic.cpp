@@ -7,6 +7,12 @@
 #include <windows.h>
 #include <stdbool.h>
 
+static bool inSpike = false;
+static float spikeEntryX = 0.0f;
+static float spikeEntryY = 0.0f;
+static int currentSpikeX = -1;
+static int currentSpikeY = -1;
+
 // ========================== CONSTANTS ==========================
 #define MAX_MAP_WIDTH 120
 #define MAX_MAP_HEIGHT 9
@@ -840,54 +846,91 @@ void checkSpikeCollision(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
     int tileXLeft = (int)((ballX - ballRadius) / blockSize);
     int tileXRight = (int)((ballX + ballRadius) / blockSize);
 
-    bool hitSpike = false;
+    bool currentlyInSpike = false;
+    int spikeX = -1, spikeY = -1;
 
     if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH)
     {
         if (map[tileYBelow][tileX] == '|')
         {
-            hitSpike = true;
+            currentlyInSpike = true;
+            spikeX = tileX;
+            spikeY = tileYBelow;
         }
     }
 
-    if (tileYAbove >= 0 && tileYAbove < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH)
+    if (!currentlyInSpike && tileYAbove >= 0 && tileYAbove < MAX_MAP_HEIGHT && tileX >= 0 && tileX < MAX_MAP_WIDTH)
     {
         if (map[tileYAbove][tileX] == '|')
         {
-            hitSpike = true;
+            currentlyInSpike = true;
+            spikeX = tileX;
+            spikeY = tileYAbove;
         }
     }
 
-    if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXLeft >= 0 && tileXLeft < MAX_MAP_WIDTH)
+    if (!currentlyInSpike && tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXLeft >= 0 && tileXLeft < MAX_MAP_WIDTH)
     {
         if (map[tileYBelow][tileXLeft] == '|')
         {
-            hitSpike = true;
+            currentlyInSpike = true;
+            spikeX = tileXLeft;
+            spikeY = tileYBelow;
         }
     }
 
-    if (tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXRight >= 0 && tileXRight < MAX_MAP_WIDTH)
+    if (!currentlyInSpike && tileYBelow >= 0 && tileYBelow < MAX_MAP_HEIGHT && tileXRight >= 0 && tileXRight < MAX_MAP_WIDTH)
     {
         if (map[tileYBelow][tileXRight] == '|')
         {
-            hitSpike = true;
+            currentlyInSpike = true;
+            spikeX = tileXRight;
+            spikeY = tileYBelow;
         }
     }
 
-    if (hitSpike)
+    if (currentlyInSpike)
     {
-        lives--;
-        if (lives <= 0)
+        if (!inSpike || spikeX != currentSpikeX || spikeY != currentSpikeY)
         {
-            currentState = STATE_GAME_OVER;
+            inSpike = true;
+            spikeEntryX = ballX;
+            spikeEntryY = ballY;
+            currentSpikeX = spikeX;
+            currentSpikeY = spikeY;
         }
         else
         {
-            respawnAtCheckpoint();
+            float distanceTraveled = sqrt(pow(ballX - spikeEntryX, 2) + pow(ballY - spikeEntryY, 2));
+            
+//in range 
+            if (distanceTraveled >= 15.0f)
+            {
+                // Trigger collision
+                lives--;
+                if (lives <= 0)
+                {
+                    currentState = STATE_GAME_OVER;
+                }
+                else
+                {
+                    respawnAtCheckpoint();
+                }
+                
+                // Reset 
+                inSpike = false;
+                currentSpikeX = -1;
+                currentSpikeY = -1;
+            }
         }
     }
+    else
+    {
+        inSpike = false;
+        currentSpikeX = -1;
+        currentSpikeY = -1;
+    }
 }
-
 // Check victory condition
 void checkVictory(char map[MAX_MAP_HEIGHT][MAX_MAP_WIDTH])
 {
@@ -1738,7 +1781,7 @@ void iMouse(int button, int state, int mx, int my)
             // Settings button
             else if (mx >= 450 && mx <= 450 + btnW && my >= 300 && my <= 300 + btnH)
 {
-    previousState = STATE_PAUSE;  // Remember we came from pause menu
+    previousState = STATE_PAUSE;  
     currentState = STATE_SETTINGS;
 }
             // Menu button
@@ -1750,7 +1793,7 @@ void iMouse(int button, int state, int mx, int my)
         else if (currentState == STATE_GAME)
         {
             // FIXED: Proper pause button click detection
-            if (mx >= 950 && mx <= 1000 && my >= 550 && my <= 600) // Assuming pause button is 50x50 pixels
+            if (mx >= 950 && mx <= 1000 && my >= 550 && my <= 600) 
             {
                 // Save current game state when pausing
                 savedBallX = ballX;
