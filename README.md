@@ -29,5 +29,5 @@ This is a classic "Bounce" game developed using the iGraphics library. The game 
    - You can find the demo [here](https://youtu.be/IH5sCFg7bIg?si=gfGyfNAVIp9DhmeE)
 
 ## Game States 
--Main Menu
+- Main Menu
 <img src="assets/images/wallpaper.bmp" alt="Bounce Classic" width ="900"/>
