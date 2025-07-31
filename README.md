@@ -31,5 +31,6 @@ This is a classic "Bounce" game developed using the iGraphics library. The game 
 ## Game States 
 - Main Menu
 <img src="assets/images/main menu.bmp" alt="Bounce Classic" width ="900"/>
-
+- About us
+  <img src="assets/images/about_us_main.bmp" alt="Bounce Classic" width ="900"/>
 
