@@ -73,5 +73,5 @@ This is a classic "Bounce" game developed using the iGraphics library. The game 
 <img src="assets/images/victory.bmp" alt="Bounce Classic" width ="900"/>
 
 
-##Game Over
+## Game Over
 <img src="assets/images/game-over.bmp" alt="Bounce Classic" width ="900"/>
